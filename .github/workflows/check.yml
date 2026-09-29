@@ -86,6 +86,8 @@ jobs:
           grep -q 'KEYCODE_BUTTON_START' engine/app/src/main/java/javax/microedition/lcdui/Canvas.java
           grep -q 'AXIS_HAT_X' engine/app/src/main/java/javax/microedition/lcdui/Canvas.java
           grep -q 'setFocusable(false)' engine/app/src/main/java/javax/microedition/lcdui/Canvas.java
+          grep -q 'new File(context.getFilesDir(), "nom1-runtime")' engine/app/src/main/java/ru/playsoftware/j2meloader/config/Config.java
+          grep -q 'onWorkDirReady()' engine/app/src/main/java/ru/woesss/j2me/installer/Nom1LauncherActivity.java
           grep -q 'rootProject.file("keystore.properties").exists()' engine/app/build.gradle
           ! grep -q "externalNativeBuild" engine/app/build.gradle
           grep -q "Nom1LauncherActivity" engine/app/src/main/AndroidManifest.xml
