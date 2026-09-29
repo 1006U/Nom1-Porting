@@ -1,0 +1,9 @@
+[lang]
+ko,한국어
+de,DEUTSCH
+en,ENGLISH
+es,ESPAÑOL
+fr,FRANÇAIS
+it,ITALIANO
+
+[urls]
