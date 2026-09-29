@@ -2,7 +2,7 @@ name: Porting checks
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
 
 jobs:
@@ -19,24 +19,32 @@ jobs:
           ref: 1.8.2
           path: engine
 
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
       - name: Create manifest-only test JAR
-        shell: python
         run: |
+          python - <<'PY'
           from pathlib import Path
           import zipfile
 
           Path("game").mkdir(exist_ok=True)
           manifest = """Manifest-Version: 1.0
-MIDlet-Name: NOM (by GDC)
-MIDlet-Version: 1.0.25
-MIDlet-Vendor: Living Mobile
-MIDlet-1: NOM, i.png, Nom1
-MicroEdition-Profile: MIDP-1.0
-MicroEdition-Configuration: CLDC-1.0
+          MIDlet-Name: NOM (by GDC)
+          MIDlet-Version: 1.0.25
+          MIDlet-Vendor: Living Mobile
+          MIDlet-1: NOM, i.png, Nom1
+          MicroEdition-Profile: MIDP-1.0
+          MicroEdition-Configuration: CLDC-1.0
 
-"""
+          """
+          manifest = "\n".join(line.strip() for line in manifest.splitlines()) + "\n"
           with zipfile.ZipFile("game/nom1.jar", "w") as zf:
               zf.writestr("META-INF/MANIFEST.MF", manifest)
+          PY
 
       - name: Check Python syntax
         run: |
@@ -47,19 +55,7 @@ MicroEdition-Configuration: CLDC-1.0
       - name: Apply NOM port patches
         run: python tools/prepare_engine.py --engine engine --jar game/nom1.jar
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-
-      - name: Build open debug APK
-        working-directory: engine
-        run: |
-          chmod +x gradlew
-          ./gradlew :app:assembleOpenDebug --stacktrace
-
-      - name: Verify patched engine
+      - name: Verify direct-touch patch
         run: |
           grep -q "MIN_SDK = 24" engine/build.gradle
           grep -q "com.u1006.nom1" engine/app/build.gradle
@@ -67,6 +63,14 @@ MicroEdition-Configuration: CLDC-1.0
           ! grep -q "externalNativeBuild" engine/app/build.gradle
           grep -q "Nom1LauncherActivity" engine/app/src/main/AndroidManifest.xml
           grep -q "handleNomTouch" engine/app/src/main/java/javax/microedition/lcdui/Canvas.java
-          grep -q "tryNomDirectMenuTap" engine/app/src/main/java/javax/microedition/lcdui/Canvas.java\n          grep -q "KEY_NUM5" engine/app/src/main/java/javax/microedition/lcdui/Canvas.java\n          ! grep -q "swipeThreshold" engine/app/src/main/java/javax/microedition/lcdui/Canvas.java
+          grep -q "tryNomDirectMenuTap" engine/app/src/main/java/javax/microedition/lcdui/Canvas.java
+          grep -q "KEY_NUM5" engine/app/src/main/java/javax/microedition/lcdui/Canvas.java
+          ! grep -q "swipeThreshold" engine/app/src/main/java/javax/microedition/lcdui/Canvas.java
           test -f engine/app/src/main/java/ru/woesss/j2me/installer/Nom1LauncherActivity.java
           test -f engine/app/src/main/assets/nom1/nom1.jar
+
+      - name: Build open debug APK
+        working-directory: engine
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:assembleOpenDebug --stacktrace
