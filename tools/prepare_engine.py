@@ -371,6 +371,41 @@ def copy_overlay(root: Path, engine: Path, jar_path: Path) -> None:
         old_jar.unlink()
 
 
+
+def patch_app_icon(root: Path, engine: Path) -> None:
+    icon_src = root / "branding" / "app_icon.png"
+    if not icon_src.is_file():
+        return
+
+    icon_dst = (
+        engine
+        / "app"
+        / "src"
+        / "main"
+        / "res"
+        / "drawable-nodpi"
+        / "nom1_icon.png"
+    )
+    icon_dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(icon_src, icon_dst)
+
+    manifest = engine / "app" / "src" / "main" / "AndroidManifest.xml"
+    text = manifest.read_text(encoding="utf-8")
+    text = re.sub(
+        r'android:icon="@mipmap/ic_launcher"',
+        'android:icon="@drawable/nom1_icon"',
+        text,
+        count=1,
+    )
+    text = re.sub(
+        r'android:roundIcon="@mipmap/ic_launcher"',
+        'android:roundIcon="@drawable/nom1_icon"',
+        text,
+        count=1,
+    )
+    manifest.write_text(text, encoding="utf-8")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Prepare J2ME Loader as the NOM 1 Android port")
     parser.add_argument("--engine", default="engine", help="J2ME Loader checkout")
@@ -399,6 +434,7 @@ def main() -> int:
     patch_installer(engine)
     patch_canvas(engine)
     patch_manifest(engine)
+    patch_app_icon(root, engine)
 
     print("Prepared NOM 1 Android port")
     print(f"  MIDlet: {manifest.get('MIDlet-Name')}")
