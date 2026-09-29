@@ -732,7 +732,10 @@ import android.widget.PopupWindow;
 \t\t\t\treturn;
 \t\t\t}
 
-\t\t\tint barHeight = nomDp(58);
+\t\t\tboolean landscape =
+\t\t\t\t\tmView.getResources().getConfiguration().orientation
+\t\t\t\t\t\t\t== android.content.res.Configuration.ORIENTATION_LANDSCAPE;
+\t\t\tint barHeight = nomDp(landscape ? 44 : 58);
 
 \t\t\tnomButtonBar = new LinearLayout(mView.getContext());
 \t\t\tnomButtonBar.setOrientation(LinearLayout.HORIZONTAL);
@@ -893,7 +896,6 @@ def patch_manifest(engine: Path) -> None:
             android:name="ru.woesss.j2me.installer.Nom1LauncherActivity"
             android:exported="true"
             android:screenOrientation="sensor"
-            android:configChanges="orientation|screenSize"
             android:theme="@style/AppTheme.NoActionBar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -918,7 +920,6 @@ def patch_manifest(engine: Path) -> None:
             android:name="javax.microedition.shell.MicroActivity"
             android:exported="false"
             android:screenOrientation="sensor"
-            android:configChanges="orientation|screenSize"
             android:theme="@style/AppTheme.NoActionBar"
 """
     if micro_new not in text:
