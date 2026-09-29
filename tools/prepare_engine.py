@@ -38,6 +38,24 @@ def validate_jar(jar_path: Path) -> dict[str, str]:
     if not jar_path.is_file():
         raise FileNotFoundError(f"NOM JAR not found: {jar_path}")
 
+    with zipfile.ZipFile(jar_path) as zf:
+        native_3d_refs: list[str] = []
+        for name in zf.namelist():
+            if not name.endswith(".class"):
+                continue
+            data = zf.read(name)
+            if b"javax/microedition/m3g" in data:
+                native_3d_refs.append(f"{name}: javax.microedition.m3g")
+            if b"com/mascotcapsule/micro3d" in data:
+                native_3d_refs.append(f"{name}: com.mascotcapsule.micro3d")
+
+        if native_3d_refs:
+            raise RuntimeError(
+                "This NOM JAR uses native 3D APIs, but the current Android port "
+                "intentionally disables J2ME Loader's M3G/Micro3D native build:\n- "
+                + "\n- ".join(native_3d_refs[:10])
+            )
+
     manifest = read_manifest(jar_path)
     midlet_1 = manifest.get("MIDlet-1", "")
     main_class = midlet_1.rsplit(",", 1)[-1].strip() if midlet_1 else ""
@@ -133,6 +151,27 @@ def patch_build_files(engine: Path) -> None:
         release_new,
         "optional release signing configuration",
     )
+
+    # NOM 1 is a 2D MIDP title and the analyzed JAR contains no references to
+    # javax.microedition.m3g or Mascot Capsule Micro3D. Upstream J2ME Loader
+    # still configures those native libraries for every build, which adds an
+    # unnecessary NDK failure point on Windows. Remove the native build block
+    # for this dedicated NOM port.
+    app_text = app_gradle.read_text(encoding="utf-8")
+    native_block = """    externalNativeBuild {
+        ndkBuild {
+            path 'src/main/cpp/Android.mk'
+        }
+    }
+
+"""
+    if native_block in app_text:
+        app_text = app_text.replace(native_block, "", 1)
+        app_gradle.write_text(app_text, encoding="utf-8")
+    elif "externalNativeBuild" in app_text:
+        raise RuntimeError(
+            "J2ME Loader externalNativeBuild block changed; refusing to remove it blindly"
+        )
 
 
 def patch_installer(engine: Path) -> None:
@@ -346,6 +385,7 @@ def main() -> int:
     print(f"  version: {manifest.get('MIDlet-Version')}")
     print(f"  engine: {engine}")
     print("  minSdk: 24")
+    print("  native 3D: disabled (NOM JAR does not use M3G/Micro3D)")
     print("  controls: tap=5, swipes=2/4/6/8")
     return 0
 
