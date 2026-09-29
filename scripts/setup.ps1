@@ -22,12 +22,21 @@ if (-not (Test-Path (Join-Path $Engine ".git"))) {
 }
 
 Write-Host "Checking Korean font patch dependencies..."
-python -c "import PIL" 2>$null
+$PillowInstalled = python -c "import importlib.util; print('yes' if importlib.util.find_spec('PIL') else 'no')"
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "Installing Pillow for Korean bitmap font generation..."
+    throw "Python could not check for Pillow. Verify that Python is installed and available as 'python'."
+}
+
+if ($PillowInstalled.Trim() -ne "yes") {
+    Write-Host "Pillow is not installed. Installing it now..."
     python -m pip install --user Pillow
     if ($LASTEXITCODE -ne 0) {
-        throw "Could not install Pillow. Run: python -m pip install Pillow"
+        throw "Could not install Pillow. Run manually: python -m pip install --user Pillow"
+    }
+
+    $PillowInstalled = python -c "import importlib.util; print('yes' if importlib.util.find_spec('PIL') else 'no')"
+    if ($LASTEXITCODE -ne 0 -or $PillowInstalled.Trim() -ne "yes") {
+        throw "Pillow installation completed but Python still cannot import PIL."
     }
 }
 
