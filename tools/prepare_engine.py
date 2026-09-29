@@ -223,13 +223,13 @@ import android.widget.PopupWindow;
 """
     replace_once(path, import_old, import_new, "NOM bottom button imports")
 
-    fields_old = """\tprivate class ViewCallbacks implements View.OnTouchListener, SurfaceHolder.Callback, View.OnKeyListener, View.OnGenericMotionListener {
+    fields_old = """\tprivate class ViewCallbacks implements View.OnTouchListener, SurfaceHolder.Callback, View.OnKeyListener {
 \t\tprivate final View mView;
 \t\tOverlayView overlayView;
 
 \t\tpublic ViewCallbacks(View view) {
 """
-    fields_new = """\tprivate class ViewCallbacks implements View.OnTouchListener, SurfaceHolder.Callback, View.OnKeyListener {
+    fields_new = """\tprivate class ViewCallbacks implements View.OnTouchListener, SurfaceHolder.Callback, View.OnKeyListener, View.OnGenericMotionListener {
 \t\tprivate final View mView;
 \t\tOverlayView overlayView;
 
