@@ -131,18 +131,21 @@ public final class Nom1LauncherActivity extends Activity {
         profile.screenWidth = 176;
         profile.screenHeight = 208;
 
-        // Fill the entire Galaxy display. This intentionally stretches the
-        // original J2ME canvas to the device aspect ratio so there are no
-        // letterbox bars on tall Galaxy screens.
-        profile.screenScaleType = 2;
+        // Preserve the original J2ME aspect ratio and upscale as large as
+        // possible without stretching. Any remaining area stays as a solid
+        // background instead of distorting the game image.
+        profile.screenScaleType = 1;
         profile.screenScaleRatio = 100;
         profile.screenGravity = 2;
         profile.forceFullscreen = true;
+        profile.screenBackgroundColor = 0x000000;
+
+        // Keep pixel-art edges crisp while scaling.
+        profile.screenFilter = false;
 
         profile.showKeyboard = false;
         profile.touchInput = false;
 
-        profile.screenFilter = false;
         profile.graphicsMode = 1;
 
         if (!ProfilesManager.saveConfig(profile)) {
