@@ -335,7 +335,7 @@ def copy_overlay(root: Path, engine: Path, jar_path: Path) -> None:
         engine
         / "app"
         / "src"
-        / "open"
+        / "main"
         / "java"
         / "ru"
         / "woesss"
@@ -346,9 +346,29 @@ def copy_overlay(root: Path, engine: Path, jar_path: Path) -> None:
     launcher_dst.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(launcher_src, launcher_dst)
 
-    jar_dst = engine / "app" / "src" / "open" / "assets" / "nom1" / "nom1.jar"
+    jar_dst = engine / "app" / "src" / "main" / "assets" / "nom1" / "nom1.jar"
     jar_dst.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(jar_path, jar_dst)
+
+    # Clean up older generated locations so Android Studio cannot accidentally
+    # run a flavor whose manifest points at a launcher class that is absent.
+    old_launcher = (
+        engine
+        / "app"
+        / "src"
+        / "open"
+        / "java"
+        / "ru"
+        / "woesss"
+        / "j2me"
+        / "installer"
+        / "Nom1LauncherActivity.java"
+    )
+    old_jar = engine / "app" / "src" / "open" / "assets" / "nom1" / "nom1.jar"
+    if old_launcher.exists():
+        old_launcher.unlink()
+    if old_jar.exists():
+        old_jar.unlink()
 
 
 def main() -> int:
