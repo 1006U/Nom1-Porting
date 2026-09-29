@@ -50,6 +50,14 @@ public final class Nom1LauncherActivity extends Activity {
 
             File jar = copyBundledJar();
             appListModel = new AppListModel(getApplication());
+
+            // On older Android devices J2ME Loader may construct the repository
+            // before its working directory is considered ready, leaving the
+            // Room DAO null. The NOM port has already created a private runtime
+            // directory, so initialize the DB explicitly before AppInstaller
+            // performs any repository lookup.
+            appListModel.getAppRepository().onWorkDirReady();
+
             installer = new AppInstaller(
                     jar.getAbsolutePath(),
                     Uri.fromFile(jar),
