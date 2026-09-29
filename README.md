@@ -68,6 +68,19 @@ cd engine
 
 The APK will be under `engine/app/build/outputs/apk/open/debug/`.
 
+### If Android Studio reports a missing `engine/keystore.properties`
+
+Pull the latest port scripts and run setup again. The current patch makes the upstream
+release keystore optional for Gradle Sync and debug builds:
+
+```powershell
+git pull
+powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1
+```
+
+You do **not** need to create a release keystore to build or run `:app:assembleOpenDebug`.
+A keystore is only needed later when you want a signed release APK.
+
 ## Known source JAR used for initial analysis
 
 The uploaded reference build identified itself as:
