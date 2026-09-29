@@ -18,6 +18,8 @@ The original game JAR is intentionally **not committed**. Put a legally obtained
   - Swipe down -> J2ME `8`
   - Swipe left -> J2ME `4`
   - Swipe right -> J2ME `6`
+  - Tap bottom-left letterbox -> J2ME left soft key `-6` / Pause
+  - Tap bottom-right letterbox -> J2ME right soft key `-7` / Back
 
 ## Runtime strategy
 
