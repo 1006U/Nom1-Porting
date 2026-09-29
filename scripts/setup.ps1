@@ -21,7 +21,24 @@ if (-not (Test-Path (Join-Path $Engine ".git"))) {
     Write-Host "Using existing engine checkout: $Engine"
 }
 
-python tools/prepare_engine.py --engine $Engine --jar $Jar
+Write-Host "Checking Korean font patch dependencies..."
+python -c "import PIL" 2>$null
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Installing Pillow for Korean bitmap font generation..."
+    python -m pip install --user Pillow
+    if ($LASTEXITCODE -ne 0) {
+        throw "Could not install Pillow. Run: python -m pip install Pillow"
+    }
+}
+
+$PatchedJar = "game/generated/nom1-ko.jar"
+Write-Host "Creating Korean NOM 1 JAR..."
+python tools/patch_korean.py --input $Jar --output $PatchedJar
+if ($LASTEXITCODE -ne 0) {
+    throw "Korean JAR patch failed."
+}
+
+python tools/prepare_engine.py --engine $Engine --jar $PatchedJar
 
 Write-Host ""
 Write-Host "NOM 1 port workspace is ready."
