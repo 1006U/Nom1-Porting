@@ -88,6 +88,10 @@ jobs:
           grep -q 'setFocusable(false)' engine/app/src/main/java/javax/microedition/lcdui/Canvas.java
           grep -q 'new File(context.getFilesDir(), "nom1-runtime")' engine/app/src/main/java/ru/playsoftware/j2meloader/config/Config.java
           grep -q 'onWorkDirReady()' engine/app/src/main/java/ru/woesss/j2me/installer/Nom1LauncherActivity.java
+          grep -q 'profile.orientation = 1' engine/app/src/main/java/ru/woesss/j2me/installer/Nom1LauncherActivity.java
+          grep -q 'profile.screenKeepAspectRatio = true' engine/app/src/main/java/ru/woesss/j2me/installer/Nom1LauncherActivity.java
+          grep -q 'android:screenOrientation="sensor"' engine/app/src/main/AndroidManifest.xml
+          grep -q 'ORIENTATION_LANDSCAPE' engine/app/src/main/java/javax/microedition/lcdui/Canvas.java
           grep -q 'rootProject.file("keystore.properties").exists()' engine/app/build.gradle
           ! grep -q "externalNativeBuild" engine/app/build.gradle
           grep -q "Nom1LauncherActivity" engine/app/src/main/AndroidManifest.xml
