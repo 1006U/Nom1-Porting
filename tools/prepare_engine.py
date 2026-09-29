@@ -223,7 +223,7 @@ import android.widget.PopupWindow;
 """
     replace_once(path, import_old, import_new, "NOM bottom button imports")
 
-    fields_old = """\tprivate class ViewCallbacks implements View.OnTouchListener, SurfaceHolder.Callback, View.OnKeyListener {
+    fields_old = """\tprivate class ViewCallbacks implements View.OnTouchListener, SurfaceHolder.Callback, View.OnKeyListener, View.OnGenericMotionListener {
 \t\tprivate final View mView;
 \t\tOverlayView overlayView;
 
@@ -241,6 +241,116 @@ import android.widget.PopupWindow;
 \t\tprivate void fireNomKey(int keyCode) {
 \t\t\tpostKeyPressed(keyCode);
 \t\t\tpostKeyReleased(keyCode);
+\t\t}
+
+\t\tprivate int nomGamepadXKey;
+\t\tprivate int nomGamepadYKey;
+
+\t\tprivate boolean isNomGamepadEvent(android.view.InputEvent event) {
+\t\t\tint source = event.getSource();
+\t\t\treturn (source & android.view.InputDevice.SOURCE_GAMEPAD)
+\t\t\t\t\t== android.view.InputDevice.SOURCE_GAMEPAD
+\t\t\t\t\t|| (source & android.view.InputDevice.SOURCE_JOYSTICK)
+\t\t\t\t\t== android.view.InputDevice.SOURCE_JOYSTICK;
+\t\t}
+
+\t\tprivate int nomGamepadKey(int androidKeyCode) {
+\t\t\tswitch (androidKeyCode) {
+\t\t\t\tcase KeyEvent.KEYCODE_DPAD_UP:
+\t\t\t\t\treturn KEY_NUM2;
+\t\t\t\tcase KeyEvent.KEYCODE_DPAD_LEFT:
+\t\t\t\t\treturn KEY_NUM4;
+\t\t\t\tcase KeyEvent.KEYCODE_DPAD_RIGHT:
+\t\t\t\t\treturn KEY_NUM6;
+\t\t\t\tcase KeyEvent.KEYCODE_DPAD_DOWN:
+\t\t\t\t\treturn KEY_NUM8;
+
+\t\t\t\tcase KeyEvent.KEYCODE_BUTTON_A:
+\t\t\t\tcase KeyEvent.KEYCODE_BUTTON_X:
+\t\t\t\tcase KeyEvent.KEYCODE_BUTTON_Y:
+\t\t\t\tcase KeyEvent.KEYCODE_BUTTON_R1:
+\t\t\t\tcase KeyEvent.KEYCODE_BUTTON_R2:
+\t\t\t\tcase KeyEvent.KEYCODE_BUTTON_THUMBL:
+\t\t\t\tcase KeyEvent.KEYCODE_BUTTON_THUMBR:
+\t\t\t\t\treturn KEY_NUM5;
+
+\t\t\t\tcase KeyEvent.KEYCODE_BUTTON_B:
+\t\t\t\tcase KeyEvent.KEYCODE_BUTTON_BACK:
+\t\t\t\t\treturn KEY_SOFT_RIGHT;
+
+\t\t\t\tcase KeyEvent.KEYCODE_BUTTON_START:
+\t\t\t\tcase KeyEvent.KEYCODE_BUTTON_MODE:
+\t\t\t\tcase KeyEvent.KEYCODE_BUTTON_SELECT:
+\t\t\t\t\treturn KEY_SOFT_LEFT;
+\t\t\t}
+\t\t\treturn 0;
+\t\t}
+
+\t\tprivate boolean handleNomGamepadKey(int keyCode, KeyEvent event) {
+\t\t\tif (!isNomGamepadEvent(event)) {
+\t\t\t\treturn false;
+\t\t\t}
+
+\t\t\tint midpKey = nomGamepadKey(keyCode);
+\t\t\tif (midpKey == 0) {
+\t\t\t\treturn false;
+\t\t\t}
+
+\t\t\tif (event.getAction() == KeyEvent.ACTION_DOWN) {
+\t\t\t\tif (event.getRepeatCount() == 0) {
+\t\t\t\t\tpostKeyPressed(midpKey);
+\t\t\t\t} else {
+\t\t\t\t\tpostKeyRepeated(midpKey);
+\t\t\t\t}
+\t\t\t\treturn true;
+\t\t\t}
+\t\t\tif (event.getAction() == KeyEvent.ACTION_UP) {
+\t\t\t\tpostKeyReleased(midpKey);
+\t\t\t\treturn true;
+\t\t\t}
+\t\t\treturn false;
+\t\t}
+
+\t\tprivate void updateNomGamepadAxis(boolean horizontal, int nextKey) {
+\t\t\tint previous = horizontal ? nomGamepadXKey : nomGamepadYKey;
+\t\t\tif (previous == nextKey) {
+\t\t\t\treturn;
+\t\t\t}
+\t\t\tif (previous != 0) {
+\t\t\t\tpostKeyReleased(previous);
+\t\t\t}
+\t\t\tif (nextKey != 0) {
+\t\t\t\tpostKeyPressed(nextKey);
+\t\t\t}
+\t\t\tif (horizontal) {
+\t\t\t\tnomGamepadXKey = nextKey;
+\t\t\t} else {
+\t\t\t\tnomGamepadYKey = nextKey;
+\t\t\t}
+\t\t}
+
+\t\t@Override
+\t\tpublic boolean onGenericMotion(View v, MotionEvent event) {
+\t\t\tif (!isNomGamepadEvent(event)
+\t\t\t\t\t|| event.getAction() != MotionEvent.ACTION_MOVE) {
+\t\t\t\treturn false;
+\t\t\t}
+
+\t\t\tfloat x = event.getAxisValue(MotionEvent.AXIS_HAT_X);
+\t\t\tfloat y = event.getAxisValue(MotionEvent.AXIS_HAT_Y);
+\t\t\tif (Math.abs(x) < 0.01f) {
+\t\t\t\tx = event.getAxisValue(MotionEvent.AXIS_X);
+\t\t\t}
+\t\t\tif (Math.abs(y) < 0.01f) {
+\t\t\t\ty = event.getAxisValue(MotionEvent.AXIS_Y);
+\t\t\t}
+
+\t\t\tfinal float deadZone = 0.45f;
+\t\t\tint xKey = x <= -deadZone ? KEY_NUM4 : (x >= deadZone ? KEY_NUM6 : 0);
+\t\t\tint yKey = y <= -deadZone ? KEY_NUM2 : (y >= deadZone ? KEY_NUM8 : 0);
+\t\t\tupdateNomGamepadAxis(true, xKey);
+\t\t\tupdateNomGamepadAxis(false, yKey);
+\t\t\treturn true;
 \t\t}
 
 \t\tprivate java.lang.reflect.Field findNomField(String name, Class<?> type, boolean wantStatic) {
@@ -679,6 +789,7 @@ import android.widget.PopupWindow;
 \t\t\tinnerView.getHolder().addCallback(callback);
 \t\t\tinnerView.setOnTouchListener(callback);
 \t\t\tinnerView.setOnKeyListener(callback);
+\t\t\tinnerView.setOnGenericMotionListener(callback);
 \t\t\tinnerView.setFocusableInTouchMode(true);
 \t\t\tlayout.addView(innerView);
 \t\t\tinnerView.requestFocus();
@@ -707,6 +818,18 @@ import android.widget.PopupWindow;
 \t\t\tswitch (event.getActionMasked()) {
 """
     replace_once(path, touch_old, touch_new, "NOM direct-touch dispatch")
+
+    key_old = """\t\tpublic boolean onKey(View v, int keyCode, KeyEvent event) {
+\t\t\tswitch (event.getAction()) {
+"""
+    key_new = """\t\tpublic boolean onKey(View v, int keyCode, KeyEvent event) {
+\t\t\tif (handleNomGamepadKey(keyCode, event)) {
+\t\t\t\treturn true;
+\t\t\t}
+
+\t\t\tswitch (event.getAction()) {
+"""
+    replace_once(path, key_old, key_new, "NOM gamepad button mapping")
 
 
 def patch_manifest(engine: Path) -> None:
