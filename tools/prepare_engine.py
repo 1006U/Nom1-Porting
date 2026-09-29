@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import io
 import re
 import shutil
@@ -762,9 +763,9 @@ def copy_overlay(root: Path, engine: Path, jar_path: Path) -> None:
 
 
 def patch_app_icon(root: Path, engine: Path) -> None:
-    icon_hex = root / "branding" / "app_icon.jpg.hex"
-    if not icon_hex.is_file():
-        raise FileNotFoundError(f"NOM launcher icon source not found: {icon_hex}")
+    icon_b64 = root / "branding" / "app_icon.jpg.b64"
+    if not icon_b64.is_file():
+        raise FileNotFoundError(f"NOM launcher icon source not found: {icon_b64}")
 
     try:
         from PIL import Image
@@ -775,16 +776,16 @@ def patch_app_icon(root: Path, engine: Path) -> None:
         ) from exc
 
     try:
-        encoded = "".join(icon_hex.read_text(encoding="ascii").split())
-        icon_bytes = bytes.fromhex(encoded)
+        encoded = "".join(icon_b64.read_text(encoding="ascii").split())
+        # Git/text transports commonly strip trailing '=' padding. Restore it
+        # before decoding instead of failing with "Incorrect padding".
+        encoded += "=" * (-len(encoded) % 4)
+        icon_bytes = base64.b64decode(encoded, validate=True)
     except Exception as exc:
-        raise RuntimeError(f"Could not decode NOM launcher icon: {icon_hex}") from exc
+        raise RuntimeError(f"Could not decode NOM launcher icon: {icon_b64}") from exc
 
-    if len(icon_bytes) != 9690:
-        raise RuntimeError(
-            f"Unexpected NOM launcher icon size: {len(icon_bytes)} bytes "
-            "(expected 9690 bytes)"
-        )
+    if not icon_bytes:
+        raise RuntimeError("Decoded NOM launcher icon is empty")
 
     res_dir = engine / "app" / "src" / "main" / "res"
     legacy_sizes = {
