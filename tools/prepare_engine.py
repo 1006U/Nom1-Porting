@@ -94,6 +94,46 @@ def patch_build_files(engine: Path) -> None:
 """
     replace_once(app_gradle, open_start, open_replacement, "NOM open flavor configuration")
 
+    # Upstream J2ME Loader expects a release keystore even while Gradle is only
+    # configuring/syncing a debug build. NOM development must work without any
+    # private signing material, so only load/apply the release keystore when it
+    # actually exists (or when the upstream Bitrise environment supplies one).
+    signing_else_old = """            } else {
+                Properties keystoreProps = new Properties()
+                keystoreProps.load(new FileInputStream(rootProject.file("keystore.properties")))
+"""
+    signing_else_new = """            } else if (rootProject.file("keystore.properties").exists()) {
+                Properties keystoreProps = new Properties()
+                keystoreProps.load(new FileInputStream(rootProject.file("keystore.properties")))
+"""
+    replace_once(
+        app_gradle,
+        signing_else_old,
+        signing_else_new,
+        "optional release keystore loading",
+    )
+
+    release_old = """        release {
+            minifyEnabled true
+            shrinkResources true
+            signingConfig signingConfigs.release
+        }
+"""
+    release_new = """        release {
+            minifyEnabled true
+            shrinkResources true
+            if (System.getenv()['BITRISE_IO'] || rootProject.file("keystore.properties").exists()) {
+                signingConfig signingConfigs.release
+            }
+        }
+"""
+    replace_once(
+        app_gradle,
+        release_old,
+        release_new,
+        "optional release signing configuration",
+    )
+
 
 def patch_installer(engine: Path) -> None:
     path = engine / "app" / "src" / "main" / "java" / "ru" / "woesss" / "j2me" / "installer" / "AppInstaller.java"
