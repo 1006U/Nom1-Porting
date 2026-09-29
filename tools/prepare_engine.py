@@ -804,132 +804,96 @@ def copy_overlay(root: Path, engine: Path, jar_path: Path) -> None:
 
 
 def patch_app_icon(root: Path, engine: Path) -> None:
-    icon_src = root / "branding" / "app_icon.jpg"
-    if not icon_src.is_file():
-        raise FileNotFoundError(f"NOM launcher icon not found: {icon_src}")
-
-    try:
-        from PIL import Image
-    except ImportError as exc:
-        raise RuntimeError(
-            "Pillow is required to generate Android launcher icons. "
-            "Run: python -m pip install --user Pillow"
-        ) from exc
-
+    # This vector is traced directly from the supplied 246x244 NOM artwork.
+    # Keeping it as XML avoids binary corruption in Git transport while
+    # preserving the original NOM/GAMEVIL silhouette and lettering.
     res_dir = engine / "app" / "src" / "main" / "res"
+    legacy_dir = res_dir / "mipmap-anydpi"
+    adaptive_dir = res_dir / "mipmap-anydpi-v26"
+    drawable_dir = res_dir / "drawable"
+    legacy_dir.mkdir(parents=True, exist_ok=True)
+    adaptive_dir.mkdir(parents=True, exist_ok=True)
+    drawable_dir.mkdir(parents=True, exist_ok=True)
 
-    legacy_sizes = {
-        "mipmap-mdpi": 48,
-        "mipmap-hdpi": 72,
-        "mipmap-xhdpi": 96,
-        "mipmap-xxhdpi": 144,
-        "mipmap-xxxhdpi": 192,
-    }
-    adaptive_sizes = {
-        "mipmap-mdpi": 108,
-        "mipmap-hdpi": 162,
-        "mipmap-xhdpi": 216,
-        "mipmap-xxhdpi": 324,
-        "mipmap-xxxhdpi": 432,
-    }
+    black_path = "M0,0h123v1h-123z M0,1h2v1h-2z M121,1h2v1h-2z M0,2h2v1h-2z M122,2h1v1h-1z M0,3h2v1h-2z M122,3h1v1h-1z M0,4h1v1h-1z M122,4h1v1h-1z M0,5h1v1h-1z M122,5h1v1h-1z M0,6h1v1h-1z M122,6h1v1h-1z M0,7h1v1h-1z M122,7h1v1h-1z M0,8h1v1h-1z M122,8h1v1h-1z M0,9h1v1h-1z M14,9h2v1h-2z M122,9h1v1h-1z M0,10h1v1h-1z M12,10h2v1h-2z M16,10h2v1h-2z M122,10h1v1h-1z M0,11h1v1h-1z M11,11h2v1h-2z M14,11h2v1h-2z M17,11h2v1h-2z M122,11h1v1h-1z M0,12h1v1h-1z M11,12h1v1h-1z M14,12h2v1h-2z M18,12h1v1h-1z M50,12h2v1h-2z M122,12h1v1h-1z M0,13h1v1h-1z M12,13h1v1h-1z M14,13h4v1h-4z M50,13h3v1h-3z M122,13h1v1h-1z M0,14h1v1h-1z M16,14h1v1h-1z M21,14h1v1h-1z M50,14h3v1h-3z M122,14h1v1h-1z M0,15h1v1h-1z M14,15h2v1h-2z M21,15h1v1h-1z M50,15h3v1h-3z M122,15h1v1h-1z M0,16h1v1h-1z M21,16h1v1h-1z M50,16h3v1h-3z M122,16h1v1h-1z M0,17h1v1h-1z M20,17h2v1h-2z M50,17h3v1h-3z M122,17h1v1h-1z M0,18h1v1h-1z M16,18h7v1h-7z M50,18h3v1h-3z M122,18h1v1h-1z M0,19h1v1h-1z M16,19h6v1h-6z M50,19h3v1h-3z M122,19h1v1h-1z M0,20h1v1h-1z M50,20h3v1h-3z M122,20h1v1h-1z M0,21h1v1h-1z M16,21h6v1h-6z M50,21h3v1h-3z M122,21h1v1h-1z M0,22h1v1h-1z M16,22h6v1h-6z M50,22h3v1h-3z M122,22h1v1h-1z M0,23h1v1h-1z M50,23h3v1h-3z M122,23h1v1h-1z M0,24h1v1h-1z M16,24h3v1h-3z M50,24h3v1h-3z M122,24h1v1h-1z M0,25h1v1h-1z M16,25h4v1h-4z M50,25h3v1h-3z M122,25h1v1h-1z M0,26h1v1h-1z M17,26h5v1h-5z M50,26h3v1h-3z M122,26h1v1h-1z M0,27h1v1h-1z M19,27h4v1h-4z M50,27h3v1h-3z M122,27h1v1h-1z M0,28h1v1h-1z M18,28h4v1h-4z M50,28h3v1h-3z M122,28h1v1h-1z M0,29h1v1h-1z M16,29h5v1h-5z M50,29h3v1h-3z M122,29h1v1h-1z M0,30h1v1h-1z M16,30h2v1h-2z M50,30h3v1h-3z M122,30h1v1h-1z M0,31h1v1h-1z M50,31h3v1h-3z M122,31h1v1h-1z M0,32h1v1h-1z M122,32h1v1h-1z M0,33h1v1h-1z M122,33h1v1h-1z M0,34h1v1h-1z M122,34h1v1h-1z M0,35h1v1h-1z M88,35h2v1h-2z M122,35h1v1h-1z M0,36h1v1h-1z M88,36h3v1h-3z M122,36h1v1h-1z M0,37h1v1h-1z M88,37h3v1h-3z M122,37h1v1h-1z M0,38h1v1h-1z M88,38h3v1h-3z M122,38h1v1h-1z M0,39h1v1h-1z M88,39h3v1h-3z M122,39h1v1h-1z M0,40h1v1h-1z M88,40h3v1h-3z M122,40h1v1h-1z M0,41h1v1h-1z M88,41h2v1h-2z M122,41h1v1h-1z M0,42h1v1h-1z M88,42h3v1h-3z M122,42h1v1h-1z M0,43h1v1h-1z M40,43h16v1h-16z M69,43h22v1h-22z M122,43h1v1h-1z M0,44h1v1h-1z M40,44h16v1h-16z M69,44h22v1h-22z M122,44h1v1h-1z M0,45h1v1h-1z M41,45h15v1h-15z M69,45h21v1h-21z M122,45h1v1h-1z M0,46h1v1h-1z M69,46h3v1h-3z M122,46h1v1h-1z M0,47h1v1h-1z M69,47h2v1h-2z M122,47h1v1h-1z M0,48h1v1h-1z M69,48h3v1h-3z M122,48h1v1h-1z M0,49h1v1h-1z M122,49h1v1h-1z M0,50h1v1h-1z M122,50h1v1h-1z M0,51h1v1h-1z M122,51h1v1h-1z M0,52h1v1h-1z M88,52h2v1h-2z M122,52h1v1h-1z M0,53h1v1h-1z M88,53h3v1h-3z M122,53h1v1h-1z M0,54h1v1h-1z M88,54h3v1h-3z M122,54h1v1h-1z M0,55h1v1h-1z M88,55h3v1h-3z M122,55h1v1h-1z M0,56h1v1h-1z M88,56h3v1h-3z M122,56h1v1h-1z M0,57h1v1h-1z M88,57h3v1h-3z M122,57h1v1h-1z M0,58h1v1h-1z M88,58h2v1h-2z M122,58h1v1h-1z M0,59h1v1h-1z M88,59h2v1h-2z M122,59h1v1h-1z M0,60h1v1h-1z M41,60h49v1h-49z M122,60h1v1h-1z M0,61h1v1h-1z M40,61h51v1h-51z M122,61h1v1h-1z M0,62h1v1h-1z M41,62h49v1h-49z M122,62h1v1h-1z M0,63h1v1h-1z M122,63h1v1h-1z M0,64h1v1h-1z M122,64h1v1h-1z M0,65h1v1h-1z M122,65h1v1h-1z M0,66h1v1h-1z M122,66h1v1h-1z M0,67h1v1h-1z M122,67h1v1h-1z M0,68h1v1h-1z M122,68h1v1h-1z M0,69h1v1h-1z M88,69h2v1h-2z M122,69h1v1h-1z M0,70h1v1h-1z M88,70h3v1h-3z M122,70h1v1h-1z M0,71h1v1h-1z M88,71h2v1h-2z M122,71h1v1h-1z M0,72h1v1h-1z M88,72h2v1h-2z M122,72h1v1h-1z M0,73h1v1h-1z M88,73h2v1h-2z M122,73h1v1h-1z M0,74h1v1h-1z M88,74h2v1h-2z M122,74h1v1h-1z M0,75h1v1h-1z M88,75h2v1h-2z M122,75h1v1h-1z M0,76h1v1h-1z M50,76h25v1h-25z M88,76h2v1h-2z M122,76h1v1h-1z M0,77h1v1h-1z M50,77h25v1h-25z M88,77h2v1h-2z M122,77h1v1h-1z M0,78h1v1h-1z M50,78h25v1h-25z M88,78h2v1h-2z M122,78h1v1h-1z M0,79h1v1h-1z M50,79h3v1h-3z M65,79h4v1h-4z M88,79h2v1h-2z M122,79h1v1h-1z M0,80h1v1h-1z M50,80h3v1h-3z M65,80h3v1h-3z M88,80h2v1h-2z M122,80h1v1h-1z M0,81h1v1h-1z M50,81h3v1h-3z M61,81h7v1h-7z M88,81h2v1h-2z M122,81h1v1h-1z M0,82h1v1h-1z M50,82h3v1h-3z M60,82h7v1h-7z M88,82h2v1h-2z M122,82h1v1h-1z M0,83h1v1h-1z M50,83h3v1h-3z M59,83h8v1h-8z M88,83h2v1h-2z M122,83h1v1h-1z M0,84h1v1h-1z M50,84h3v1h-3z M59,84h2v1h-2z M62,84h4v1h-4z M88,84h2v1h-2z M122,84h1v1h-1z M0,85h1v1h-1z M50,85h3v1h-3z M60,85h1v1h-1z M63,85h4v1h-4z M69,85h2v1h-2z M88,85h2v1h-2z M122,85h1v1h-1z M0,86h1v1h-1z M50,86h3v1h-3z M61,86h10v1h-10z M88,86h2v1h-2z M122,86h1v1h-1z M0,87h1v1h-1z M50,87h3v1h-3z M61,87h8v1h-8z M88,87h2v1h-2z M122,87h1v1h-1z M0,88h1v1h-1z M50,88h2v1h-2z M61,88h5v1h-5z M88,88h2v1h-2z M122,88h1v1h-1z M0,89h1v1h-1z M50,89h2v1h-2z M60,89h6v1h-6z M88,89h2v1h-2z M122,89h1v1h-1z M0,90h1v1h-1z M50,90h2v1h-2z M54,90h1v1h-1z M59,90h8v1h-8z M88,90h2v1h-2z M122,90h1v1h-1z M0,91h1v1h-1z M50,91h6v1h-6z M59,91h3v1h-3z M64,91h4v1h-4z M88,91h2v1h-2z M122,91h1v1h-1z M0,92h1v1h-1z M50,92h4v1h-4z M56,92h5v1h-5z M66,92h3v1h-3z M88,92h2v1h-2z M122,92h1v1h-1z M0,93h1v1h-1z M50,93h4v1h-4z M56,93h4v1h-4z M68,93h2v1h-2z M71,93h1v1h-1z M88,93h2v1h-2z M122,93h1v1h-1z M0,94h1v1h-1z M50,94h3v1h-3z M57,94h2v1h-2z M69,94h3v1h-3z M88,94h2v1h-2z M122,94h1v1h-1z M0,95h1v1h-1z M50,95h2v1h-2z M70,95h2v1h-2z M88,95h2v1h-2z M122,95h1v1h-1z M0,96h1v1h-1z M50,96h3v1h-3z M88,96h2v1h-2z M122,96h1v1h-1z M0,97h1v1h-1z M50,97h3v1h-3z M88,97h2v1h-2z M122,97h1v1h-1z M0,98h1v1h-1z M50,98h3v1h-3z M88,98h2v1h-2z M122,98h1v1h-1z M0,99h1v1h-1z M50,99h3v1h-3z M88,99h2v1h-2z M122,99h1v1h-1z M0,100h1v1h-1z M50,100h2v1h-2z M88,100h2v1h-2z M122,100h1v1h-1z M0,101h1v1h-1z M88,101h2v1h-2z M122,101h1v1h-1z M0,102h1v1h-1z M88,102h2v1h-2z M122,102h1v1h-1z M0,103h1v1h-1z M88,103h2v1h-2z M122,103h1v1h-1z M0,104h1v1h-1z M88,104h2v1h-2z M122,104h1v1h-1z M0,105h1v1h-1z M88,105h2v1h-2z M122,105h1v1h-1z M0,106h1v1h-1z M88,106h2v1h-2z M122,106h1v1h-1z M0,107h1v1h-1z M88,107h2v1h-2z M122,107h1v1h-1z M0,108h1v1h-1z M88,108h3v1h-3z M122,108h1v1h-1z M0,109h1v1h-1z M88,109h3v1h-3z M122,109h1v1h-1z M0,110h1v1h-1z M88,110h3v1h-3z M122,110h1v1h-1z M0,111h1v1h-1z M40,111h51v1h-51z M122,111h1v1h-1z M0,112h1v1h-1z M41,112h50v1h-50z M122,112h1v1h-1z M0,113h1v1h-1z M41,113h49v1h-49z M122,113h1v1h-1z M0,114h1v1h-1z M122,114h1v1h-1z M0,115h1v1h-1z M122,115h1v1h-1z M0,116h1v1h-1z M122,116h1v1h-1z M0,117h1v1h-1z M122,117h1v1h-1z M0,118h2v1h-2z M122,118h1v1h-1z M0,119h1v1h-1z M122,119h1v1h-1z M0,120h2v1h-2z M121,120h2v1h-2z M0,121h123v1h-123z"
+    white_path = "M38,9h11v1h-11z M37,10h12v1h-12z M38,11h12v1h-12z M37,12h12v1h-12z M37,13h12v1h-12z M37,14h12v1h-12z M38,15h11v1h-11z M38,16h11v1h-11z M38,17h11v1h-11z M38,18h11v1h-11z M38,19h11v1h-11z M38,20h11v1h-11z M38,21h11v1h-11z M38,22h11v1h-11z M38,23h11v1h-11z M38,24h11v1h-11z M38,25h11v1h-11z M38,26h11v1h-11z M38,27h11v1h-11z M38,28h11v1h-11z M38,29h11v1h-11z M38,30h11v1h-11z M38,31h11v1h-11z M16,32h1v1h-1z M21,32h1v1h-1z M38,32h49v1h-49z M16,33h6v1h-6z M38,33h50v1h-50z M16,34h2v1h-2z M19,34h3v1h-3z M38,34h50v1h-50z M16,35h7v1h-7z M38,35h49v1h-49z M16,36h2v1h-2z M21,36h2v1h-2z M38,36h49v1h-49z M16,37h2v1h-2z M20,37h2v1h-2z M38,37h49v1h-49z M16,38h6v1h-6z M38,38h49v1h-49z M16,39h5v1h-5z M38,39h49v1h-49z M37,40h50v1h-50z M17,41h5v1h-5z M37,41h50v1h-50z M16,42h6v1h-6z M38,42h49v1h-49z M16,43h2v1h-2z M57,43h11v1h-11z M15,44h7v1h-7z M57,44h11v1h-11z M15,45h7v1h-7z M57,45h11v1h-11z M16,46h2v1h-2z M56,46h12v1h-12z M16,47h2v1h-2z M57,47h11v1h-11z M16,48h6v1h-6z M56,48h12v1h-12z M16,49h6v1h-6z M38,49h49v1h-49z M18,50h1v1h-1z M37,50h51v1h-51z M17,51h5v1h-5z M38,51h50v1h-50z M16,52h6v1h-6z M37,52h50v1h-50z M16,53h4v1h-4z M37,53h50v1h-50z M16,54h2v1h-2z M19,54h1v1h-1z M37,54h50v1h-50z M16,55h1v1h-1z M38,55h49v1h-49z M15,56h3v1h-3z M37,56h50v1h-50z M16,57h6v1h-6z M37,57h50v1h-50z M17,58h6v1h-6z M37,58h50v1h-50z M38,59h49v1h-49z M16,60h1v1h-1z M19,60h3v1h-3z M16,61h6v1h-6z M16,62h2v1h-2z M20,62h2v1h-2z M16,63h2v1h-2z M20,63h3v1h-3z M16,64h1v1h-1z M20,64h3v1h-3z M16,65h2v1h-2z M21,65h1v1h-1z M16,66h6v1h-6z M38,66h49v1h-49z M16,67h6v1h-6z M38,67h50v1h-50z M37,68h50v1h-50z M37,69h50v1h-50z M37,70h50v1h-50z M37,71h50v1h-50z M37,72h50v1h-50z M37,73h50v1h-50z M37,74h50v1h-50z M37,75h50v1h-50z M38,76h11v1h-11z M76,76h11v1h-11z M38,77h11v1h-11z M76,77h11v1h-11z M38,78h11v1h-11z M76,78h11v1h-11z M38,79h11v1h-11z M76,79h11v1h-11z M38,80h11v1h-11z M76,80h11v1h-11z M38,81h11v1h-11z M75,81h12v1h-12z M38,82h11v1h-11z M75,82h12v1h-12z M38,83h11v1h-11z M75,83h12v1h-12z M38,84h11v1h-11z M75,84h12v1h-12z M38,85h11v1h-11z M76,85h11v1h-11z M38,86h11v1h-11z M76,86h11v1h-11z M38,87h11v1h-11z M75,87h12v1h-12z M38,88h11v1h-11z M75,88h12v1h-12z M38,89h11v1h-11z M75,89h12v1h-12z M38,90h11v1h-11z M75,90h12v1h-12z M38,91h11v1h-11z M75,91h12v1h-12z M38,92h11v1h-11z M75,92h12v1h-12z M38,93h11v1h-11z M75,93h12v1h-12z M38,94h11v1h-11z M76,94h11v1h-11z M38,95h11v1h-11z M76,95h11v1h-11z M38,96h11v1h-11z M76,96h11v1h-11z M38,97h11v1h-11z M76,97h11v1h-11z M38,98h11v1h-11z M76,98h11v1h-11z M38,99h11v1h-11z M76,99h11v1h-11z M38,100h11v1h-11z M75,100h12v1h-12z M38,101h49v1h-49z M38,102h49v1h-49z M38,103h49v1h-49z M38,104h49v1h-49z M37,105h50v1h-50z M37,106h50v1h-50z M37,107h50v1h-50z M37,108h50v1h-50z M38,109h49v1h-49z M38,110h49v1h-49z"
 
-    try:
-        with Image.open(icon_src) as opened:
-            opened.load()
-            source = opened.convert("RGBA")
+    def vector_xml(scale: float) -> str:
+        return f"""<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="123"
+    android:viewportHeight="122">
+    <path
+        android:fillColor="#FEA000"
+        android:pathData="M0,0h123v122h-123z" />
+    <group
+        android:pivotX="61.5"
+        android:pivotY="61"
+        android:scaleX="{scale}"
+        android:scaleY="{scale}">
+        <path
+            android:fillColor="#000000"
+            android:pathData="{black_path}" />
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="{white_path}" />
+    </group>
+</vector>
+"""
 
-            if source.size != (246, 244):
-                print(
-                    f"warning: launcher icon size is {source.size}; "
-                    "the supplied reference image was 246x244",
-                    file=sys.stderr,
-                )
+    # Pre-Android 8: use a complete vector icon with generous orange padding.
+    legacy_xml = vector_xml(0.76)
+    (legacy_dir / "ic_launcher.xml").write_text(legacy_xml, encoding="utf-8")
+    (legacy_dir / "ic_launcher_round.xml").write_text(legacy_xml, encoding="utf-8")
 
-            # The source artwork uses an orange field. Sample a central point
-            # away from its black outer border and use that as padding so the
-            # original image remains untouched and fully visible.
-            sample_x = min(source.width - 1, max(0, source.width // 4))
-            sample_y = min(source.height - 1, max(0, source.height // 4))
-            pixel = source.getpixel((sample_x, sample_y))
-            orange = (pixel[0], pixel[1], pixel[2], 255)
-
-            def fit_without_crop(canvas_size: int, content_ratio: float, transparent: bool):
-                canvas = Image.new(
-                    "RGBA",
-                    (canvas_size, canvas_size),
-                    (0, 0, 0, 0) if transparent else orange,
-                )
-                max_box = max(1, int(round(canvas_size * content_ratio)))
-                scale = min(max_box / source.width, max_box / source.height)
-                width = max(1, int(round(source.width * scale)))
-                height = max(1, int(round(source.height * scale)))
-                art = source.resize((width, height), Image.Resampling.LANCZOS)
-                x = (canvas_size - width) // 2
-                y = (canvas_size - height) // 2
-                canvas.alpha_composite(art, (x, y))
-                return canvas
-
-            # Legacy launchers may also apply their own mask. 72% keeps the
-            # complete "놈" artwork and vertical GAMEVIL mark inside a safe zone.
-            for folder, size in legacy_sizes.items():
-                out_dir = res_dir / folder
-                out_dir.mkdir(parents=True, exist_ok=True)
-                fit_without_crop(size, 0.72, False).save(
-                    out_dir / "ic_launcher.png",
-                    format="PNG",
-                    optimize=True,
-                )
-
-            # Adaptive foreground canvases are larger than the visible icon.
-            # Keeping the unmodified artwork inside 60% guarantees that even
-            # Samsung's circular/squircle masks do not cut the NOM lettering.
-            for folder, size in adaptive_sizes.items():
-                out_dir = res_dir / folder
-                out_dir.mkdir(parents=True, exist_ok=True)
-                fit_without_crop(size, 0.60, True).save(
-                    out_dir / "ic_launcher_foreground.png",
-                    format="PNG",
-                    optimize=True,
-                )
-
-            drawable_dir = res_dir / "drawable"
-            drawable_dir.mkdir(parents=True, exist_ok=True)
-            color_hex = "#{:02X}{:02X}{:02X}".format(
-                orange[0], orange[1], orange[2]
-            )
-            (drawable_dir / "nom1_icon_background.xml").write_text(
-                f"""<?xml version="1.0" encoding="utf-8"?>
+    # Android 8+: adaptive icon. The artwork foreground is intentionally
+    # smaller than the mandatory safe zone so Samsung launchers cannot crop
+    # the large "놈" character or vertical GAMEVIL mark.
+    foreground_xml = vector_xml(0.62)
+    (drawable_dir / "nom1_icon_foreground.xml").write_text(
+        foreground_xml, encoding="utf-8"
+    )
+    (drawable_dir / "nom1_icon_background.xml").write_text(
+        """<?xml version="1.0" encoding="utf-8"?>
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">
-    <solid android:color="{color_hex}" />
+    <solid android:color="#FEA000" />
 </shape>
 """,
-                encoding="utf-8",
-            )
+        encoding="utf-8",
+    )
 
-            adaptive_dir = res_dir / "mipmap-anydpi-v26"
-            adaptive_dir.mkdir(parents=True, exist_ok=True)
-            adaptive_xml = """<?xml version="1.0" encoding="utf-8"?>
+    adaptive_xml = """<?xml version="1.0" encoding="utf-8"?>
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@drawable/nom1_icon_background" />
-    <foreground android:drawable="@mipmap/ic_launcher_foreground" />
+    <foreground android:drawable="@drawable/nom1_icon_foreground" />
 </adaptive-icon>
 """
-            (adaptive_dir / "ic_launcher.xml").write_text(
-                adaptive_xml, encoding="utf-8"
-            )
-            (adaptive_dir / "ic_launcher_round.xml").write_text(
-                adaptive_xml, encoding="utf-8"
-            )
+    (adaptive_dir / "ic_launcher.xml").write_text(
+        adaptive_xml, encoding="utf-8"
+    )
+    (adaptive_dir / "ic_launcher_round.xml").write_text(
+        adaptive_xml, encoding="utf-8"
+    )
 
-    except Exception as exc:
-        raise RuntimeError(
-            f"Could not generate Android launcher icons from {icon_src}"
-        ) from exc
+    # Remove every upstream J2ME Loader bitmap launcher asset so resource
+    # resolution can never fall back to the Android/JL icon.
+    for folder in (
+        "mipmap-mdpi",
+        "mipmap-hdpi",
+        "mipmap-xhdpi",
+        "mipmap-xxhdpi",
+        "mipmap-xxxhdpi",
+    ):
+        target_dir = res_dir / folder
+        for name in ("ic_launcher.png", "ic_launcher_foreground.png"):
+            target = target_dir / name
+            if target.exists():
+                target.unlink()
 
-    # Remove the old generated vector icon so it can never override the exact
-    # supplied artwork.
-    old_vector = res_dir / "drawable" / "nom1_icon.xml"
+    old_vector = drawable_dir / "nom1_icon.xml"
     if old_vector.exists():
         old_vector.unlink()
 
