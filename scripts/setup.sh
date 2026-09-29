@@ -17,6 +17,14 @@ fi
 
 if [[ ! -d "$ENGINE/.git" ]]; then
   git clone --depth 1 --branch "$TAG" "$UPSTREAM" "$ENGINE"
+else
+  echo "Refreshing upstream files patched by NOM..."
+  git -C "$ENGINE" checkout -- \
+    build.gradle \
+    app/build.gradle \
+    app/src/main/AndroidManifest.xml \
+    app/src/main/java/ru/woesss/j2me/installer/AppInstaller.java \
+    app/src/main/java/javax/microedition/lcdui/Canvas.java
 fi
 
 if ! python3 -c "import PIL" >/dev/null 2>&1; then
