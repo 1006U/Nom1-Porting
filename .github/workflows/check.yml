@@ -79,6 +79,13 @@ jobs:
           test ! -f engine/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
           grep -q 'styleNomButton' engine/app/src/main/java/javax/microedition/lcdui/Canvas.java
           grep -q '255, 166, 0' engine/app/src/main/java/javax/microedition/lcdui/Canvas.java
+          grep -q 'handleNomGamepadKey' engine/app/src/main/java/javax/microedition/lcdui/Canvas.java
+          grep -q 'onGenericMotion' engine/app/src/main/java/javax/microedition/lcdui/Canvas.java
+          grep -q 'setOnGenericMotionListener' engine/app/src/main/java/javax/microedition/lcdui/Canvas.java
+          grep -q 'KEYCODE_BUTTON_A' engine/app/src/main/java/javax/microedition/lcdui/Canvas.java
+          grep -q 'KEYCODE_BUTTON_START' engine/app/src/main/java/javax/microedition/lcdui/Canvas.java
+          grep -q 'AXIS_HAT_X' engine/app/src/main/java/javax/microedition/lcdui/Canvas.java
+          grep -q 'setFocusable(false)' engine/app/src/main/java/javax/microedition/lcdui/Canvas.java
           grep -q 'rootProject.file("keystore.properties").exists()' engine/app/build.gradle
           ! grep -q "externalNativeBuild" engine/app/build.gradle
           grep -q "Nom1LauncherActivity" engine/app/src/main/AndroidManifest.xml
