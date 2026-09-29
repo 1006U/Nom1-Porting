@@ -39,7 +39,7 @@ public final class Nom1LauncherActivity extends Activity {
 
         statusView = new TextView(this);
         statusView.setGravity(Gravity.CENTER);
-        statusView.setText("Preparing NOM 1...");
+        statusView.setText("놈1 준비 중...");
         setContentView(statusView);
 
         try {
@@ -156,7 +156,7 @@ public final class Nom1LauncherActivity extends Activity {
     private void showError(Throwable error) {
         error.printStackTrace();
         runOnUiThread(() -> statusView.setText(
-                "NOM 1 could not start.\n\n"
+                "놈1 실행 실패.\n\n"
                         + error.getClass().getSimpleName()
                         + ": "
                         + String.valueOf(error.getMessage())
