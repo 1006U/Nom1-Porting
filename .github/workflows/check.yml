@@ -52,6 +52,9 @@ jobs:
           python -m py_compile tools/patch_korean.py
           python -m py_compile tools/generate_korean_fonts.py
 
+      - name: Install icon build dependency
+        run: python -m pip install Pillow
+
       - name: Apply NOM port patches
         run: python tools/prepare_engine.py --engine engine --jar game/nom1.jar
 
@@ -62,8 +65,14 @@ jobs:
           grep -q "resValue 'string', 'app_name', '놈1'" engine/app/build.gradle
           ! grep -q "JL-Debug" engine/app/build.gradle
           grep -q 'android:label="놈1"' engine/app/src/main/AndroidManifest.xml
-          grep -q 'android:icon="@drawable/nom1_icon"' engine/app/src/main/AndroidManifest.xml
-          test -f engine/app/src/main/res/drawable-nodpi/nom1_icon.png
+          grep -q 'android:icon="@mipmap/ic_launcher"' engine/app/src/main/AndroidManifest.xml
+          grep -q 'android:roundIcon="@mipmap/ic_launcher"' engine/app/src/main/AndroidManifest.xml
+          test ! -f engine/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
+          test -f engine/app/src/main/res/mipmap-mdpi/ic_launcher.png
+          test -f engine/app/src/main/res/mipmap-hdpi/ic_launcher.png
+          test -f engine/app/src/main/res/mipmap-xhdpi/ic_launcher.png
+          test -f engine/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
+          test -f engine/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
           grep -q 'rootProject.file("keystore.properties").exists()' engine/app/build.gradle
           ! grep -q "externalNativeBuild" engine/app/build.gradle
           grep -q "Nom1LauncherActivity" engine/app/src/main/AndroidManifest.xml
