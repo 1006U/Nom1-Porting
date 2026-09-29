@@ -63,13 +63,14 @@ The setup keeps `game/nom1.jar` unchanged, creates `game/generated/nom1-ko.jar`,
 generates Korean glyphs from a Korean system font, and bundles that patched JAR into the
 Android APK. On Windows it uses Malgun Gothic when available.
 
-For the easiest build + USB install flow:
+For the easiest APK-only build flow:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\one-click.ps1
 ```
 
-After that, NOM 1 behaves like a normal Android app: tap its icon to launch directly.
+This does not use ADB or USB debugging and does not install anything on a device.
+The finished APK is copied to `dist/NOM1-debug.apk`. Install that APK manually on the phone.
 Then open the generated `engine` directory in Android Studio only if you want to debug it.
 
 Build the debug APK with:
