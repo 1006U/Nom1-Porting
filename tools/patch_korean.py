@@ -70,9 +70,13 @@ def patch_jar(source: Path, output: Path, patch_dir: Path, font: str | None = No
         if "ko,한국어" not in lang:
             raise RuntimeError("Korean language entry was not written")
         ko = zf.read("text__ko.txt").decode("utf-8-sig")
-        if "[menu]" not in ko or "새 게임" not in ko:
+        # Git on Windows commonly checks text files out with CRLF line endings.
+        # Normalize all newline variants before validating resource sections so
+        # a correct Korean patch does not fail only because of core.autocrlf.
+        ko_normalized = ko.replace("\r\n", "\n").replace("\r", "\n")
+        if "[menu]" not in ko_normalized or "새 게임" not in ko_normalized:
             raise RuntimeError("Korean translation validation failed")
-        if "[softkey]\n확인\n뒤로\n일시정지" not in ko:
+        if "[softkey]\n확인\n뒤로\n일시정지" not in ko_normalized:
             raise RuntimeError("Korean softkey labels are missing")
 
     print(f"Korean NOM 1 JAR ready: {output}")
