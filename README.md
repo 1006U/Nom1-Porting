@@ -33,6 +33,8 @@ The setup pins the engine to the J2ME Loader 1.8.2 release and applies NOM-speci
 4. The virtual keypad is disabled.
 5. Canvas touch handling is replaced with NOM tap/swipe controls.
 6. The app launches NOM directly instead of showing the normal emulator library UI.
+7. The original JAR is copied and patched with Korean text plus generated Korean bitmap glyphs.
+8. `branding/app_icon.png` is used as the Android launcher icon.
 
 ## Setup on Windows
 
@@ -57,7 +59,18 @@ Run:
 powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1
 ```
 
-Then open the generated `engine` directory in Android Studio.
+The setup keeps `game/nom1.jar` unchanged, creates `game/generated/nom1-ko.jar`,
+generates Korean glyphs from a Korean system font, and bundles that patched JAR into the
+Android APK. On Windows it uses Malgun Gothic when available.
+
+For the easiest build + USB install flow:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\one-click.ps1
+```
+
+After that, NOM 1 behaves like a normal Android app: tap its icon to launch directly.
+Then open the generated `engine` directory in Android Studio only if you want to debug it.
 
 Build the debug APK with:
 
