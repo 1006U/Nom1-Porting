@@ -65,17 +65,12 @@ jobs:
           grep -q "resValue 'string', 'app_name', '놈1'" engine/app/build.gradle
           ! grep -q "JL-Debug" engine/app/build.gradle
           grep -q 'android:label="놈1"' engine/app/src/main/AndroidManifest.xml
-          grep -q 'android:icon="@mipmap/ic_launcher"' engine/app/src/main/AndroidManifest.xml
-          grep -q 'android:roundIcon="@mipmap/ic_launcher"' engine/app/src/main/AndroidManifest.xml
-          test -f engine/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
-          test -f engine/app/src/main/res/mipmap-mdpi/ic_launcher.png
-          test -f engine/app/src/main/res/mipmap-hdpi/ic_launcher.png
-          test -f engine/app/src/main/res/mipmap-xhdpi/ic_launcher.png
-          test -f engine/app/src/main/res/mipmap-xxhdpi/ic_launcher.png
-          test -f engine/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-          test -f engine/app/src/main/res/mipmap-mdpi/ic_launcher_foreground.png
-          test -f engine/app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png
-          grep -q '@mipmap/ic_launcher_foreground' engine/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
+          grep -q 'android:icon="@drawable/nom1_icon"' engine/app/src/main/AndroidManifest.xml
+          grep -q 'android:roundIcon="@drawable/nom1_icon"' engine/app/src/main/AndroidManifest.xml
+          test -f engine/app/src/main/res/drawable/nom1_icon.xml
+          grep -q 'android:scaleX="0.72"' engine/app/src/main/res/drawable/nom1_icon.xml
+          grep -q 'android:scaleY="0.72"' engine/app/src/main/res/drawable/nom1_icon.xml
+          test ! -f engine/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
           grep -q 'rootProject.file("keystore.properties").exists()' engine/app/build.gradle
           ! grep -q "externalNativeBuild" engine/app/build.gradle
           grep -q "Nom1LauncherActivity" engine/app/src/main/AndroidManifest.xml
