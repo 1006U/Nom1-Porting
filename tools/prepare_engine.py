@@ -793,7 +793,6 @@ import android.widget.PopupWindow;
 \t\t\tinnerView.getHolder().addCallback(callback);
 \t\t\tinnerView.setOnTouchListener(callback);
 \t\t\tinnerView.setOnKeyListener(callback);
-\t\t\tinnerView.setOnGenericMotionListener(callback);
 \t\t\tinnerView.setFocusableInTouchMode(true);
 \t\t\tlayout.addView(innerView);
 \t\t\tinnerView.requestFocus();
@@ -802,6 +801,7 @@ import android.widget.PopupWindow;
 \t\t\tinnerView.getHolder().addCallback(callback);
 \t\t\tinnerView.setOnTouchListener(callback);
 \t\t\tinnerView.setOnKeyListener(callback);
+\t\t\tinnerView.setOnGenericMotionListener(callback);
 \t\t\tinnerView.setFocusableInTouchMode(true);
 \t\t\tinnerView.setLayoutParams(new LinearLayout.LayoutParams(
 \t\t\t\t\tViewGroup.LayoutParams.MATCH_PARENT, 0, 1));
