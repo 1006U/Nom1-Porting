@@ -48,6 +48,7 @@ MicroEdition-Configuration: CLDC-1.0
         run: |
           grep -q "MIN_SDK = 24" engine/build.gradle
           grep -q "com.u1006.nom1" engine/app/build.gradle
+          grep -q 'rootProject.file("keystore.properties").exists()' engine/app/build.gradle
           grep -q "Nom1LauncherActivity" engine/app/src/main/AndroidManifest.xml
           grep -q "handleNomGesture" engine/app/src/main/java/javax/microedition/lcdui/Canvas.java
           grep -q "KEY_NUM5" engine/app/src/main/java/javax/microedition/lcdui/Canvas.java
