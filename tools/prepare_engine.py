@@ -112,6 +112,26 @@ def patch_build_files(engine: Path) -> None:
 """
     replace_once(app_gradle, open_start, open_replacement, "NOM open flavor configuration")
 
+    # J2ME Loader forces every non-midlet debug build to use "JL-Debug",
+    # overriding the NOM product flavor name. Replace that debug-only label
+    # with the final Android app name.
+    debug_name_old = """    applicationVariants.all {
+        if (buildType.name == 'debug' && flavorName != 'midlet') {
+            resValue 'string', 'app_name', 'JL-Debug'
+        }
+"""
+    debug_name_new = """    applicationVariants.all {
+        if (buildType.name == 'debug' && flavorName != 'midlet') {
+            resValue 'string', 'app_name', '놈1'
+        }
+"""
+    replace_once(
+        app_gradle,
+        debug_name_old,
+        debug_name_new,
+        "NOM debug application label",
+    )
+
     # Upstream J2ME Loader expects a release keystore even while Gradle is only
     # configuring/syncing a debug build. NOM development must work without any
     # private signing material, so only load/apply the release keystore when it
@@ -607,6 +627,20 @@ def patch_app_icon(root: Path, engine: Path) -> None:
         text,
         count=1,
     )
+
+    # Make the final merged manifest independent from J2ME Loader's
+    # flavor/debug resource overrides.
+    text = re.sub(
+        r'android:label="@string/app_name"',
+        'android:label="놈1"',
+        text,
+        count=1,
+    )
+
+    if 'android:icon="@drawable/nom1_icon"' not in text:
+        raise RuntimeError("Could not set NOM launcher icon in AndroidManifest.xml")
+    if 'android:label="놈1"' not in text:
+        raise RuntimeError("Could not set NOM Android app label")
     manifest.write_text(text, encoding="utf-8")
 
 
