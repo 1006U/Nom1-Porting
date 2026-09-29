@@ -12,14 +12,14 @@ The original game JAR is intentionally **not committed**. Put a legally obtained
 - Android 7.0 / API 24 or newer
 - Portrait, aspect-ratio-preserving fullscreen rendering
 - No on-screen virtual keypad
-- Touch controls:
-  - Tap -> J2ME `5` / OK / FIRE
-  - Swipe up -> J2ME `2`
-  - Swipe down -> J2ME `8`
-  - Swipe left -> J2ME `4`
-  - Swipe right -> J2ME `6`
-  - Tap bottom-left letterbox -> J2ME left soft key `-6` / Pause
-  - Tap bottom-right letterbox -> J2ME right soft key `-7` / Back
+- Touch-only controls:
+  - Main/pause menu: tap the menu item itself
+  - Options: tap the option row itself
+  - Gameplay center area -> J2ME `5` / action
+  - Gameplay upper/lower/left/right areas -> J2ME `2/8/4/6`
+  - Bottom-left letterbox -> J2ME left soft key `-6` / Pause
+  - Bottom-right letterbox -> J2ME right soft key `-7` / Back
+  - Swipe gestures are not required
 
 ## Runtime strategy
 
