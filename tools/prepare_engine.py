@@ -2,8 +2,6 @@
 from __future__ import annotations
 
 import argparse
-import base64
-import io
 import re
 import shutil
 import sys
@@ -763,149 +761,77 @@ def copy_overlay(root: Path, engine: Path, jar_path: Path) -> None:
 
 
 def patch_app_icon(root: Path, engine: Path) -> None:
-    icon_b64 = root / "branding" / "app_icon.jpg.b64"
-    if not icon_b64.is_file():
-        raise FileNotFoundError(f"NOM launcher icon source not found: {icon_b64}")
-
-    try:
-        from PIL import Image
-    except ImportError as exc:
-        raise RuntimeError(
-            "Pillow is required to generate Android launcher icons. "
-            "Run: python -m pip install --user Pillow"
-        ) from exc
-
-    try:
-        encoded = "".join(icon_b64.read_text(encoding="ascii").split())
-        # Git/text transports commonly strip trailing '=' padding. Restore it
-        # before decoding instead of failing with "Incorrect padding".
-        encoded += "=" * (-len(encoded) % 4)
-        icon_bytes = base64.b64decode(encoded, validate=True)
-    except Exception as exc:
-        raise RuntimeError(f"Could not decode NOM launcher icon: {icon_b64}") from exc
-
-    if not icon_bytes:
-        raise RuntimeError("Decoded NOM launcher icon is empty")
-
+    # The launcher artwork is stored as vector path data instead of a binary
+    # PNG/JPG. This keeps Git transport text-only and avoids broken image/base64
+    # assets while preserving the important NOM lettering and silhouette.
     res_dir = engine / "app" / "src" / "main" / "res"
-    legacy_sizes = {
-        "mipmap-mdpi": 48,
-        "mipmap-hdpi": 72,
-        "mipmap-xhdpi": 96,
-        "mipmap-xxhdpi": 144,
-        "mipmap-xxxhdpi": 192,
-    }
-    adaptive_sizes = {
-        "mipmap-mdpi": 108,
-        "mipmap-hdpi": 162,
-        "mipmap-xhdpi": 216,
-        "mipmap-xxhdpi": 324,
-        "mipmap-xxxhdpi": 432,
-    }
+    drawable_dir = res_dir / "drawable"
+    drawable_dir.mkdir(parents=True, exist_ok=True)
 
-    try:
-        with Image.open(io.BytesIO(icon_bytes)) as opened:
-            opened.load()
-            source = opened.convert("RGBA")
+    black_path = "M120,168 L124,167 L125,171 L123,172 Z M130,157 L131,158 L130,162 L121,162 L117,166 L117,169 L123,175 L119,178 L119,181 L116,184 L113,184 L110,180 L107,180 L106,182 L104,181 L104,158 L105,157 Z M99,152 L99,201 L104,201 L104,188 L109,183 L115,189 L118,189 L125,181 L127,183 L130,183 L131,185 L134,185 L139,191 L142,191 L144,189 L144,186 L142,188 L139,188 L138,184 L130,176 L131,175 L136,175 L137,173 L142,173 L142,170 L139,170 L138,172 L133,172 L132,171 L132,166 L136,163 L136,158 L137,157 L150,157 L150,152 Z M180,138 L175,138 L175,221 L174,222 L81,222 L81,226 L82,227 L180,227 Z M180,104 L175,104 L175,119 L174,120 L81,120 L81,125 L180,125 Z M81,86 L81,91 L112,91 L112,86 Z M180,70 L175,70 L175,85 L174,86 L137,86 L137,97 L142,97 L142,92 L143,91 L180,91 Z M31,48 L32,51 L39,54 L38,56 L35,56 L34,58 L31,58 L31,61 L36,61 L37,59 L40,59 L41,57 L44,57 L44,52 L41,52 L40,50 L37,50 L36,48 Z M31,42 L31,45 L44,45 L44,42 Z M44,28 L41,28 L41,35 L40,36 L32,36 L31,39 L44,39 Z M99,24 L99,63 L104,63 L104,24 Z M27,18 L23,22 L23,26 L24,27 L24,22 L27,19 L32,19 L35,22 L35,25 L33,26 L30,22 L27,24 L29,27 L31,25 L33,26 L32,30 L27,30 L27,31 L32,31 L34,29 L34,26 L38,25 L38,24 L32,18 Z M2,2 L3,1 L242,1 L243,2 L243,241 L242,242 L3,242 L2,241 Z M0,0 L0,243 L245,243 L245,0 Z"
+    white_path = "M98,152 L99,151 L150,151 L152,157 L152,201 L150,203 L106,203 L105,202 L104,203 L99,202 L98,201 Z M173,133 L171,132 L170,133 L164,133 L163,132 L159,133 L77,133 L76,134 L76,220 L80,221 L81,220 L82,221 L173,221 L174,220 L174,139 L172,137 Z M32,132 L38,135 L43,132 L36,133 L33,131 Z M32,122 L32,129 L33,129 L33,122 Z M39,120 L39,122 L42,124 L42,129 L43,129 L43,123 Z M34,103 L32,107 L33,108 L32,109 L33,115 L34,116 L43,116 L41,114 L37,115 L33,113 L34,105 L35,104 L38,105 L43,103 L38,102 Z M43,90 L41,88 L37,90 Z M114,87 L115,86 L116,87 L115,88 Z M32,87 L32,92 L33,93 L32,96 L36,99 L42,98 L41,96 L36,97 L33,95 L33,92 L35,91 Z M43,83 L38,82 L34,83 L32,85 L43,84 Z M42,66 L42,71 L43,71 L43,66 Z M32,66 L32,76 L35,79 L39,78 L40,79 L43,76 L43,73 L39,78 L34,76 L32,74 L33,73 L33,66 Z M76,19 L77,23 L76,24 L76,79 L77,80 L76,83 L77,84 L81,83 L82,85 L113,85 L114,86 L113,90 L115,93 L115,96 L113,99 L76,99 L77,103 L76,104 L76,117 L80,119 L174,119 L174,104 L172,102 L173,100 L171,98 L170,99 L144,99 L135,97 L136,96 L136,85 L137,84 L138,85 L173,85 L174,84 L174,71 L172,68 L172,65 L171,64 L169,65 L167,64 L99,64 L98,63 L98,24 L96,22 L97,21 L96,19 Z"
 
-            # Find the dominant source color instead of sampling a corner.
-            # The provided artwork has a dark border, while the real background
-            # is orange.
-            quantized = source.convert("RGB").resize((64, 64)).quantize(colors=16)
-            color_counts = quantized.getcolors()
-            if not color_counts:
-                raise RuntimeError("Could not determine NOM icon background color")
-            dominant_index = max(color_counts, key=lambda item: item[0])[1]
-            palette = quantized.getpalette()
-            base = dominant_index * 3
-            background = (
-                palette[base],
-                palette[base + 1],
-                palette[base + 2],
-                255,
-            )
+    vector_xml = f"""<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="246"
+    android:viewportHeight="244">
 
-            def fitted_art(canvas_size: int, content_ratio: float, transparent: bool):
-                canvas_color = (0, 0, 0, 0) if transparent else background
-                canvas = Image.new("RGBA", (canvas_size, canvas_size), canvas_color)
+    <path
+        android:fillColor="#FFA000"
+        android:pathData="M0,0 L246,0 L246,244 L0,244 Z" />
 
-                max_box = max(1, int(round(canvas_size * content_ratio)))
-                src_w, src_h = source.size
-                scale = min(max_box / src_w, max_box / src_h)
-                dst_w = max(1, int(round(src_w * scale)))
-                dst_h = max(1, int(round(src_h * scale)))
+    <!-- Uniformly scale the complete original artwork into the launcher safe
+         zone. Nothing is cropped or stretched; only orange margin is added. -->
+    <group
+        android:pivotX="123"
+        android:pivotY="122"
+        android:scaleX="0.72"
+        android:scaleY="0.72">
 
-                # Uniform scaling only: no crop and no aspect-ratio distortion.
-                art = source.resize((dst_w, dst_h), Image.Resampling.LANCZOS)
-                x = (canvas_size - dst_w) // 2
-                y = (canvas_size - dst_h) // 2
-                canvas.alpha_composite(art, (x, y))
-                return canvas
+        <path
+            android:fillColor="#000000"
+            android:fillType="evenOdd"
+            android:pathData="{{black_path}}" />
 
-            for folder, size in legacy_sizes.items():
-                out_dir = res_dir / folder
-                out_dir.mkdir(parents=True, exist_ok=True)
+        <path
+            android:fillColor="#FFFFFF"
+            android:fillType="evenOdd"
+            android:pathData="{{white_path}}" />
+    </group>
+</vector>
+"""
+    (drawable_dir / "nom1_icon.xml").write_text(vector_xml, encoding="utf-8")
 
-                # Legacy launchers can still mask bitmap icons. Keep the full
-                # original artwork inside a generous safe area.
-                fitted_art(size, 0.70, False).save(
-                    out_dir / "ic_launcher.png",
-                    format="PNG",
-                    optimize=True,
-                )
+    # Remove J2ME Loader's adaptive icon so Samsung/Android cannot substitute
+    # the original JL foreground/background artwork.
+    adaptive_icon = res_dir / "mipmap-anydpi-v26" / "ic_launcher.xml"
+    if adaptive_icon.exists():
+        adaptive_icon.unlink()
 
-                # Adaptive icons use a 108dp foreground canvas with a central
-                # ~66dp guaranteed safe zone. Keep the entire original image
-                # inside that zone, unchanged except for proportional scaling.
-                fg_size = adaptive_sizes[folder]
-                fitted_art(fg_size, 0.60, True).save(
-                    out_dir / "ic_launcher_foreground.png",
-                    format="PNG",
-                    optimize=True,
-                )
-
-            color_hex = "#{:02X}{:02X}{:02X}".format(
-                background[0], background[1], background[2]
-            )
-            colors_path = res_dir / "values" / "colors.xml"
-            colors_text = colors_path.read_text(encoding="utf-8")
-            colors_text, count = re.subn(
-                r'(<color name="ic_launcher_background">)[^<]*(</color>)',
-                lambda match: match.group(1) + color_hex + match.group(2),
-                colors_text,
-                count=1,
-            )
-            if count != 1:
-                raise RuntimeError("Could not set adaptive icon background color")
-            colors_path.write_text(colors_text, encoding="utf-8")
-
-            adaptive_dir = res_dir / "mipmap-anydpi-v26"
-            adaptive_dir.mkdir(parents=True, exist_ok=True)
-            (adaptive_dir / "ic_launcher.xml").write_text(
-                """<?xml version="1.0" encoding="utf-8"?>
-<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-    <background android:drawable="@color/ic_launcher_background"/>
-    <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
-</adaptive-icon>
-""",
-                encoding="utf-8",
-            )
-    except Exception as exc:
-        raise RuntimeError(
-            "The embedded NOM launcher icon could not be generated."
-        ) from exc
+    for folder in (
+        "mipmap-mdpi",
+        "mipmap-hdpi",
+        "mipmap-xhdpi",
+        "mipmap-xxhdpi",
+        "mipmap-xxxhdpi",
+    ):
+        foreground = res_dir / folder / "ic_launcher_foreground.png"
+        if foreground.exists():
+            foreground.unlink()
 
     manifest = engine / "app" / "src" / "main" / "AndroidManifest.xml"
     text = manifest.read_text(encoding="utf-8")
     text = re.sub(
         r'android:icon="[^"]+"',
-        'android:icon="@mipmap/ic_launcher"',
+        'android:icon="@drawable/nom1_icon"',
         text,
         count=1,
     )
     text = re.sub(
         r'android:roundIcon="[^"]+"',
-        'android:roundIcon="@mipmap/ic_launcher"',
+        'android:roundIcon="@drawable/nom1_icon"',
         text,
         count=1,
     )
@@ -916,9 +842,9 @@ def patch_app_icon(root: Path, engine: Path) -> None:
         count=1,
     )
 
-    if 'android:icon="@mipmap/ic_launcher"' not in text:
+    if 'android:icon="@drawable/nom1_icon"' not in text:
         raise RuntimeError("Could not set NOM launcher icon in AndroidManifest.xml")
-    if 'android:roundIcon="@mipmap/ic_launcher"' not in text:
+    if 'android:roundIcon="@drawable/nom1_icon"' not in text:
         raise RuntimeError("Could not set NOM round launcher icon")
     if 'android:label="놈1"' not in text:
         raise RuntimeError("Could not set NOM Android app label")
