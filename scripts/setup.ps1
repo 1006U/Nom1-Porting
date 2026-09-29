@@ -17,8 +17,26 @@ if (-not (Test-Path $Jar)) {
 if (-not (Test-Path (Join-Path $Engine ".git"))) {
     Write-Host "Cloning J2ME Loader $Tag..."
     git clone --depth 1 --branch $Tag $Upstream $Engine
+    if ($LASTEXITCODE -ne 0) {
+        throw "Could not clone J2ME Loader."
+    }
 } else {
     Write-Host "Using existing engine checkout: $Engine"
+
+    Write-Host "Refreshing upstream files patched by NOM..."
+    $PatchedUpstreamFiles = @(
+        "build.gradle",
+        "app/build.gradle",
+        "app/src/main/AndroidManifest.xml",
+        "app/src/main/java/ru/woesss/j2me/installer/AppInstaller.java",
+        "app/src/main/java/javax/microedition/lcdui/Canvas.java"
+    )
+    foreach ($File in $PatchedUpstreamFiles) {
+        git -C $Engine checkout -- $File
+        if ($LASTEXITCODE -ne 0) {
+            throw ("Could not restore upstream engine file: " + $File)
+        }
+    }
 }
 
 Write-Host "Checking Korean font patch dependencies..."
@@ -48,6 +66,9 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 python tools/prepare_engine.py --engine $Engine --jar $PatchedJar
+if ($LASTEXITCODE -ne 0) {
+    throw "NOM engine patch failed."
+}
 
 Write-Host ""
 Write-Host "NOM 1 port workspace is ready."
