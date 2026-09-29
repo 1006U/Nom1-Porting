@@ -204,9 +204,9 @@ def patch_canvas(engine: Path) -> None:
 \t\tprivate final View mView;
 \t\tOverlayView overlayView;
 
-\t\tprivate float nomGestureStartX;
-\t\tprivate float nomGestureStartY;
-\t\tprivate boolean nomGestureActive;
+\t\tprivate float nomTouchX;
+\t\tprivate float nomTouchY;
+\t\tprivate boolean nomTouchActive;
 \t\tprivate int nomSoftKey;
 
 \t\tprivate void fireNomKey(int keyCode) {
@@ -214,101 +214,272 @@ def patch_canvas(engine: Path) -> None:
 \t\t\tpostKeyReleased(keyCode);
 \t\t}
 
-\t\tprivate boolean handleNomGesture(MotionEvent event) {
-\t\t\tint action = event.getActionMasked();
-
-\t\t\tif (action == MotionEvent.ACTION_DOWN && event.getPointerCount() == 1) {
-\t\t\t\tfloat x = event.getX();
-\t\t\t\tfloat y = event.getY();
-
-\t\t\t\t// Use the bottom letterbox area as touch-only J2ME soft keys.
-\t\t\t\t// Left half = pause/left soft key (-6).
-\t\t\t\t// Right half = back/right soft key (-7).
-\t\t\t\tif (y > onY + onHeight) {
-\t\t\t\t\tnomSoftKey = x < mView.getWidth() / 2.0f
-\t\t\t\t\t\t\t? KEY_SOFT_LEFT : KEY_SOFT_RIGHT;
-\t\t\t\t\tnomGestureActive = false;
-\t\t\t\t\treturn true;
+\t\tprivate java.lang.reflect.Field findNomField(String name, Class<?> type, boolean wantStatic) {
+\t\t\ttry {
+\t\t\t\tjava.lang.reflect.Field[] fields = Canvas.this.getClass().getDeclaredFields();
+\t\t\t\tfor (java.lang.reflect.Field field : fields) {
+\t\t\t\t\tif (!field.getName().equals(name) || field.getType() != type) {
+\t\t\t\t\t\tcontinue;
+\t\t\t\t\t}
+\t\t\t\t\tboolean isStatic = java.lang.reflect.Modifier.isStatic(field.getModifiers());
+\t\t\t\t\tif (isStatic != wantStatic) {
+\t\t\t\t\t\tcontinue;
+\t\t\t\t\t}
+\t\t\t\t\tfield.setAccessible(true);
+\t\t\t\t\treturn field;
 \t\t\t\t}
+\t\t\t} catch (Throwable ignored) {
+\t\t\t}
+\t\t\treturn null;
+\t\t}
 
-\t\t\t\tnomSoftKey = 0;
-\t\t\t\tnomGestureStartX = x;
-\t\t\t\tnomGestureStartY = y;
-\t\t\t\tnomGestureActive = true;
+\t\tprivate int getNomStaticInt(String name, int fallback) {
+\t\t\ttry {
+\t\t\t\tjava.lang.reflect.Field field = findNomField(name, Integer.TYPE, true);
+\t\t\t\treturn field == null ? fallback : field.getInt(null);
+\t\t\t} catch (Throwable ignored) {
+\t\t\t\treturn fallback;
+\t\t\t}
+\t\t}
+
+\t\tprivate int getNomStaticByte(String name, int fallback) {
+\t\t\ttry {
+\t\t\t\tjava.lang.reflect.Field field = findNomField(name, Byte.TYPE, true);
+\t\t\t\treturn field == null ? fallback : field.getByte(null);
+\t\t\t} catch (Throwable ignored) {
+\t\t\t\treturn fallback;
+\t\t\t}
+\t\t}
+
+\t\tprivate boolean getNomStaticBoolean(String name, boolean fallback) {
+\t\t\ttry {
+\t\t\t\tjava.lang.reflect.Field field = findNomField(name, Boolean.TYPE, true);
+\t\t\t\treturn field == null ? fallback : field.getBoolean(null);
+\t\t\t} catch (Throwable ignored) {
+\t\t\t\treturn fallback;
+\t\t\t}
+\t\t}
+
+\t\tprivate String[] getNomStaticStrings(String name) {
+\t\t\ttry {
+\t\t\t\tjava.lang.reflect.Field field = findNomField(name, String[].class, true);
+\t\t\t\treturn field == null ? null : (String[]) field.get(null);
+\t\t\t} catch (Throwable ignored) {
+\t\t\t\treturn null;
+\t\t\t}
+\t\t}
+
+\t\tprivate boolean setNomStaticInt(String name, int value) {
+\t\t\ttry {
+\t\t\t\tjava.lang.reflect.Field field = findNomField(name, Integer.TYPE, true);
+\t\t\t\tif (field == null) {
+\t\t\t\t\treturn false;
+\t\t\t\t}
+\t\t\t\tfield.setInt(null, value);
 \t\t\t\treturn true;
+\t\t\t} catch (Throwable ignored) {
+\t\t\t\treturn false;
+\t\t\t}
+\t\t}
+
+\t\tprivate int invokeNomMenuY(String methodName, int index, boolean optionLayout) {
+\t\t\ttry {
+\t\t\t\tjava.lang.reflect.Method[] methods = Canvas.this.getClass().getDeclaredMethods();
+\t\t\t\tfor (java.lang.reflect.Method method : methods) {
+\t\t\t\t\tif (!method.getName().equals(methodName) || method.getReturnType() != Integer.TYPE) {
+\t\t\t\t\t\tcontinue;
+\t\t\t\t\t}
+\t\t\t\t\tClass<?>[] params = method.getParameterTypes();
+\t\t\t\t\tif (!optionLayout
+\t\t\t\t\t\t\t&& params.length == 1
+\t\t\t\t\t\t\t&& params[0] == Integer.TYPE) {
+\t\t\t\t\t\tmethod.setAccessible(true);
+\t\t\t\t\t\treturn (Integer) method.invoke(Canvas.this, index);
+\t\t\t\t\t}
+\t\t\t\t\tif (optionLayout
+\t\t\t\t\t\t\t&& params.length == 2
+\t\t\t\t\t\t\t&& params[0] == Integer.TYPE
+\t\t\t\t\t\t\t&& params[1] == Boolean.TYPE) {
+\t\t\t\t\t\tmethod.setAccessible(true);
+\t\t\t\t\t\treturn (Integer) method.invoke(Canvas.this, index, true);
+\t\t\t\t\t}
+\t\t\t\t}
+\t\t\t} catch (Throwable ignored) {
+\t\t\t}
+\t\t\treturn Integer.MIN_VALUE;
+\t\t}
+
+\t\tprivate int findNomTouchedRow(float screenY, int count, boolean optionLayout) {
+\t\t\tif (count <= 0 || onHeight <= 0) {
+\t\t\t\treturn -1;
 \t\t\t}
 
-\t\t\tif (nomSoftKey != 0) {
-\t\t\t\tif (action == MotionEvent.ACTION_UP) {
-\t\t\t\t\tint keyCode = nomSoftKey;
-\t\t\t\t\tnomSoftKey = 0;
-\t\t\t\t\tfireNomKey(keyCode);
-\t\t\t\t\treturn true;
+\t\t\tint virtualY = Math.round(convertPointerY(screenY));
+\t\t\tint best = -1;
+\t\t\tint bestDistance = Integer.MAX_VALUE;
+\t\t\tint[] centers = new int[count];
+
+\t\t\tfor (int i = 0; i < count; i++) {
+\t\t\t\tint center = invokeNomMenuY(optionLayout ? "c" : "e", i, optionLayout);
+\t\t\t\tif (center == Integer.MIN_VALUE) {
+\t\t\t\t\treturn -1;
 \t\t\t\t}
-\t\t\t\tif (action == MotionEvent.ACTION_CANCEL
-\t\t\t\t\t\t|| action == MotionEvent.ACTION_POINTER_DOWN) {
-\t\t\t\t\tnomSoftKey = 0;
+\t\t\t\tcenters[i] = center;
+\t\t\t\tint distance = Math.abs(virtualY - center);
+\t\t\t\tif (distance < bestDistance) {
+\t\t\t\t\tbestDistance = distance;
+\t\t\t\t\tbest = i;
 \t\t\t\t}
-\t\t\t\treturn true;
 \t\t\t}
 
-\t\t\tif (!nomGestureActive) {
+\t\t\tint tolerance = 14;
+\t\t\tif (count > 1) {
+\t\t\t\tint nearestGap = Integer.MAX_VALUE;
+\t\t\t\tfor (int i = 1; i < count; i++) {
+\t\t\t\t\tnearestGap = Math.min(nearestGap, Math.abs(centers[i] - centers[i - 1]));
+\t\t\t\t}
+\t\t\t\tif (nearestGap != Integer.MAX_VALUE) {
+\t\t\t\t\ttolerance = Math.max(tolerance, nearestGap / 2 + 2);
+\t\t\t\t}
+\t\t\t}
+
+\t\t\treturn bestDistance <= tolerance ? best : -1;
+\t\t}
+
+\t\tprivate boolean tryNomDirectMenuTap(float x, float y) {
+\t\t\t// This reflection path is intentionally NOM-specific. It reads the
+\t\t\t// obfuscated game's own menu state and its own menu Y-coordinate
+\t\t\t// calculation, so tapping text selects exactly the item being drawn.
+\t\t\tif (!"b".equals(Canvas.this.getClass().getName())) {
 \t\t\t\treturn false;
 \t\t\t}
 
-\t\t\tif (action == MotionEvent.ACTION_MOVE) {
+\t\t\tint state = getNomStaticByte("c", -1);
+\t\t\tint page = getNomStaticInt("J", 0);
+\t\t\tboolean paused = getNomStaticBoolean("q", false);
+
+\t\t\tif ((state == 2 && page == 0) || paused) {
+\t\t\t\tString[] items = getNomStaticStrings("a");
+\t\t\t\tif (items == null || items.length == 0) {
+\t\t\t\t\treturn false;
+\t\t\t\t}
+\t\t\t\tint row = findNomTouchedRow(y, items.length, false);
+\t\t\t\tif (row < 0 || !setNomStaticInt("I", row)) {
+\t\t\t\t\treturn false;
+\t\t\t\t}
+\t\t\t\tfireNomKey(KEY_NUM5);
+\t\t\t\treturn true;
+\t\t\t}
+
+\t\t\t// Options screen: the original game stores the selected option in M
+\t\t\t// and computes each row with c(index, true).
+\t\t\tif (state == 2 && page == 1) {
+\t\t\t\tint topSelection = getNomStaticInt("I", -1);
+\t\t\t\tint optionMenuIndex = getNomStaticByte("i", -2);
+\t\t\t\tif (topSelection == optionMenuIndex) {
+\t\t\t\t\tString[] languages = getNomStaticStrings("g");
+\t\t\t\t\tint rowCount = languages != null && languages.length >= 2 ? 5 : 4;
+\t\t\t\t\tint row = findNomTouchedRow(y, rowCount, true);
+\t\t\t\t\tif (row < 0 || !setNomStaticInt("M", row)) {
+\t\t\t\t\t\treturn false;
+\t\t\t\t\t}
+\t\t\t\t\tfireNomKey(KEY_NUM5);
+\t\t\t\t\treturn true;
+\t\t\t\t}
+\t\t\t}
+
+\t\t\treturn false;
+\t\t}
+
+\t\tprivate int nomGameplayTouchKey(float x, float y) {
+\t\t\tfloat vx = convertPointerX(x);
+\t\t\tfloat vy = convertPointerY(y);
+\t\t\tfloat nx = vx / Math.max(1.0f, width);
+\t\t\tfloat ny = vy / Math.max(1.0f, height);
+
+\t\t\t// Center is the action/OK area. Everywhere else acts as a
+\t\t\t// direction pad, chosen by the dominant axis from screen center.
+\t\t\tif (nx >= 0.34f && nx <= 0.66f && ny >= 0.34f && ny <= 0.66f) {
+\t\t\t\treturn KEY_NUM5;
+\t\t\t}
+
+\t\t\tfloat dx = nx - 0.5f;
+\t\t\tfloat dy = ny - 0.5f;
+\t\t\tif (Math.abs(dx) > Math.abs(dy)) {
+\t\t\t\treturn dx < 0 ? KEY_NUM4 : KEY_NUM6;
+\t\t\t}
+\t\t\treturn dy < 0 ? KEY_NUM2 : KEY_NUM8;
+\t\t}
+
+\t\tprivate boolean handleNomTouch(MotionEvent event) {
+\t\t\tint action = event.getActionMasked();
+
+\t\t\tif (action == MotionEvent.ACTION_DOWN && event.getPointerCount() == 1) {
+\t\t\t\tnomTouchX = event.getX();
+\t\t\t\tnomTouchY = event.getY();
+\t\t\t\tnomTouchActive = true;
+\t\t\t\tnomSoftKey = 0;
+
+\t\t\t\t// Preserve the original aspect ratio and turn the unused bottom
+\t\t\t\t// letterbox into two large soft-key touch targets.
+\t\t\t\tif (nomTouchY > onY + onHeight) {
+\t\t\t\t\tnomSoftKey = nomTouchX < mView.getWidth() / 2.0f
+\t\t\t\t\t\t\t? KEY_SOFT_LEFT : KEY_SOFT_RIGHT;
+\t\t\t\t}
 \t\t\t\treturn true;
 \t\t\t}
 
 \t\t\tif (action == MotionEvent.ACTION_POINTER_DOWN) {
-\t\t\t\tnomGestureActive = false;
-\t\t\t\treturn false;
+\t\t\t\tnomTouchActive = false;
+\t\t\t\tnomSoftKey = 0;
+\t\t\t\treturn true;
 \t\t\t}
 
 \t\t\tif (action == MotionEvent.ACTION_CANCEL) {
-\t\t\t\tnomGestureActive = false;
+\t\t\t\tnomTouchActive = false;
+\t\t\t\tnomSoftKey = 0;
 \t\t\t\treturn true;
 \t\t\t}
 
-\t\t\tif (action != MotionEvent.ACTION_UP) {
+\t\t\tif (action != MotionEvent.ACTION_UP || !nomTouchActive) {
 \t\t\t\treturn true;
 \t\t\t}
 
-\t\t\tfloat dx = event.getX() - nomGestureStartX;
-\t\t\tfloat dy = event.getY() - nomGestureStartY;
-\t\t\tnomGestureActive = false;
+\t\t\tnomTouchActive = false;
 
-\t\t\tfloat density = mView.getResources().getDisplayMetrics().density;
-\t\t\tfloat swipeThreshold = 32.0f * density;
-\t\t\tint keyCode;
-
-\t\t\tif (Math.hypot(dx, dy) < swipeThreshold) {
-\t\t\t\tkeyCode = KEY_NUM5;
-\t\t\t} else if (Math.abs(dx) > Math.abs(dy)) {
-\t\t\t\tkeyCode = dx < 0 ? KEY_NUM4 : KEY_NUM6;
-\t\t\t} else {
-\t\t\t\tkeyCode = dy < 0 ? KEY_NUM2 : KEY_NUM8;
+\t\t\tif (nomSoftKey != 0) {
+\t\t\t\tint keyCode = nomSoftKey;
+\t\t\t\tnomSoftKey = 0;
+\t\t\t\tfireNomKey(keyCode);
+\t\t\t\treturn true;
 \t\t\t}
 
-\t\t\tfireNomKey(keyCode);
+\t\t\tif (nomTouchY >= onY && nomTouchY <= onY + onHeight) {
+\t\t\t\tif (tryNomDirectMenuTap(nomTouchX, nomTouchY)) {
+\t\t\t\t\treturn true;
+\t\t\t\t}
+\t\t\t\tfireNomKey(nomGameplayTouchKey(nomTouchX, nomTouchY));
+\t\t\t\treturn true;
+\t\t\t}
+
 \t\t\treturn true;
 \t\t}
 
 \t\tpublic ViewCallbacks(View view) {
 """
-    replace_once(path, fields_old, fields_new, "NOM gesture fields")
+    replace_once(path, fields_old, fields_new, "NOM direct-touch controls")
 
     touch_old = """\t\tpublic boolean onTouch(View v, MotionEvent event) {
 \t\t\tswitch (event.getActionMasked()) {
 """
     touch_new = """\t\tpublic boolean onTouch(View v, MotionEvent event) {
-\t\t\tif (handleNomGesture(event)) {
+\t\t\tif (handleNomTouch(event)) {
 \t\t\t\treturn true;
 \t\t\t}
 
 \t\t\tswitch (event.getActionMasked()) {
 """
-    replace_once(path, touch_old, touch_new, "NOM gesture dispatch")
+    replace_once(path, touch_old, touch_new, "NOM direct-touch dispatch")
 
 
 def patch_manifest(engine: Path) -> None:
@@ -475,7 +646,7 @@ def main() -> int:
     print(f"  engine: {engine}")
     print("  minSdk: 24")
     print("  native 3D: disabled (NOM JAR does not use M3G/Micro3D)")
-    print("  controls: tap=5, swipes=2/4/6/8, bottom-left=-6, bottom-right=-7")
+    print("  controls: direct menu taps, gameplay touch zones, bottom-left=-6, bottom-right=-7")
     return 0
 
 
