@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import argparse
+import base64
+import io
 import re
 import shutil
 import sys
@@ -754,9 +756,9 @@ def copy_overlay(root: Path, engine: Path, jar_path: Path) -> None:
 
 
 def patch_app_icon(root: Path, engine: Path) -> None:
-    icon_src = root / "branding" / "app_icon.png"
-    if not icon_src.is_file():
-        raise FileNotFoundError(f"NOM launcher icon not found: {icon_src}")
+    icon_b64 = root / "branding" / "app_icon.jpg.b64"
+    if not icon_b64.is_file():
+        raise FileNotFoundError(f"NOM launcher icon source not found: {icon_b64}")
 
     try:
         from PIL import Image
@@ -765,6 +767,12 @@ def patch_app_icon(root: Path, engine: Path) -> None:
             "Pillow is required to generate Android launcher icons. "
             "Run: python -m pip install --user Pillow"
         ) from exc
+
+    try:
+        encoded = "".join(icon_b64.read_text(encoding="ascii").split())
+        icon_bytes = base64.b64decode(encoded, validate=True)
+    except Exception as exc:
+        raise RuntimeError(f"Could not decode NOM launcher icon: {icon_b64}") from exc
 
     res_dir = engine / "app" / "src" / "main" / "res"
     density_sizes = {
@@ -775,13 +783,19 @@ def patch_app_icon(root: Path, engine: Path) -> None:
         "mipmap-xxxhdpi": 192,
     }
 
-    with Image.open(icon_src) as source:
-        source = source.convert("RGBA")
-        for folder, size in density_sizes.items():
-            out_dir = res_dir / folder
-            out_dir.mkdir(parents=True, exist_ok=True)
-            out = source.resize((size, size), Image.Resampling.LANCZOS)
-            out.save(out_dir / "ic_launcher.png", format="PNG", optimize=True)
+    try:
+        with Image.open(io.BytesIO(icon_bytes)) as source:
+            source.load()
+            source = source.convert("RGBA")
+            for folder, size in density_sizes.items():
+                out_dir = res_dir / folder
+                out_dir.mkdir(parents=True, exist_ok=True)
+                out = source.resize((size, size), Image.Resampling.LANCZOS)
+                out.save(out_dir / "ic_launcher.png", format="PNG", optimize=True)
+    except Exception as exc:
+        raise RuntimeError(
+            "The embedded NOM launcher icon could not be decoded as an image."
+        ) from exc
 
     # Android 8+ prefers the upstream adaptive icon XML over the bitmap
     # resources. Remove it so Galaxy launchers must use our NOM bitmap icon
