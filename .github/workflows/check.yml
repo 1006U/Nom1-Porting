@@ -1,0 +1,55 @@
+name: Porting checks
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  prepare-engine:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout port project
+        uses: actions/checkout@v4
+
+      - name: Checkout pinned J2ME Loader
+        uses: actions/checkout@v4
+        with:
+          repository: nikita36078/J2ME-Loader
+          ref: 1.8.2
+          path: engine
+
+      - name: Create manifest-only test JAR
+        shell: python
+        run: |
+          from pathlib import Path
+          import zipfile
+
+          Path("game").mkdir(exist_ok=True)
+          manifest = """Manifest-Version: 1.0
+MIDlet-Name: NOM (by GDC)
+MIDlet-Version: 1.0.25
+MIDlet-Vendor: Living Mobile
+MIDlet-1: NOM, i.png, Nom1
+MicroEdition-Profile: MIDP-1.0
+MicroEdition-Configuration: CLDC-1.0
+
+"""
+          with zipfile.ZipFile("game/nom1.jar", "w") as zf:
+              zf.writestr("META-INF/MANIFEST.MF", manifest)
+
+      - name: Check Python syntax
+        run: python -m py_compile tools/prepare_engine.py
+
+      - name: Apply NOM port patches
+        run: python tools/prepare_engine.py --engine engine --jar game/nom1.jar
+
+      - name: Verify patched engine
+        run: |
+          grep -q "MIN_SDK = 24" engine/build.gradle
+          grep -q "com.u1006.nom1" engine/app/build.gradle
+          grep -q "Nom1LauncherActivity" engine/app/src/main/AndroidManifest.xml
+          grep -q "handleNomGesture" engine/app/src/main/java/javax/microedition/lcdui/Canvas.java
+          grep -q "KEY_NUM5" engine/app/src/main/java/javax/microedition/lcdui/Canvas.java
+          test -f engine/app/src/open/java/ru/woesss/j2me/installer/Nom1LauncherActivity.java
+          test -f engine/app/src/open/assets/nom1/nom1.jar
