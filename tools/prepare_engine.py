@@ -474,7 +474,7 @@ import android.widget.PopupWindow;
 
 \t\t\t\t// Preserve the original aspect ratio and turn the unused bottom
 \t\t\t\t// letterbox into two large soft-key touch targets.
-\t\t\t\tif (nomTouchY > onY + onHeight) {
+\t\t\t\tif (!isNomGameplay() && nomTouchY > onY + onHeight) {
 \t\t\t\t\tnomSoftKey = nomTouchX < mView.getWidth() / 2.0f
 \t\t\t\t\t\t\t? KEY_SOFT_LEFT : KEY_SOFT_RIGHT;
 \t\t\t\t}
@@ -574,6 +574,8 @@ import android.widget.PopupWindow;
 \t\t\tif (nomLeftButton == null || nomRightButton == null) {
 \t\t\t\treturn;
 \t\t\t}
+\t\t\tnomLeftButton.setAlpha(1.0f);
+\t\t\tnomRightButton.setAlpha(1.0f);
 \t\t\tnomLeftButton.setText(left == null ? "" : left);
 \t\t\tnomLeftButton.setVisibility(left == null ? View.GONE : View.VISIBLE);
 \t\t\tnomRightButton.setText(right == null ? "" : right);
@@ -589,7 +591,10 @@ import android.widget.PopupWindow;
 \t\t\tif (confirm != 0) {
 \t\t\t\tsetNomButtonLabels("예", "아니오");
 \t\t\t} else if (state == 3 && !paused) {
-\t\t\t\tsetNomButtonLabels("일시정지", null);
+\t\t\t\tsetNomButtonLabels("일시정지", "");
+\t\t\t\t// The rest of the bottom bar stays visually empty but acts as
+\t\t\t\t// a normal gameplay tap target.
+\t\t\t\tnomRightButton.setAlpha(0.0f);
 \t\t\t} else if (paused) {
 \t\t\t\tsetNomButtonLabels("확인", "뒤로");
 \t\t\t} else if (state == 2 && page == 0) {
@@ -616,6 +621,8 @@ import android.widget.PopupWindow;
 \t\t\tif (isNomGameplay()) {
 \t\t\t\tif (left) {
 \t\t\t\t\tfireNomKey(KEY_SOFT_LEFT);
+\t\t\t\t} else {
+\t\t\t\t\tfireNomKey(KEY_NUM5);
 \t\t\t\t}
 \t\t\t\treturn;
 \t\t\t}
@@ -787,11 +794,24 @@ def patch_app_icon(root: Path, engine: Path) -> None:
         with Image.open(io.BytesIO(icon_bytes)) as source:
             source.load()
             source = source.convert("RGBA")
+
+            # Samsung/Android launchers crop the outer edge of legacy bitmap
+            # icons. Keep the original NOM artwork inside an 80% safe area so
+            # the large "놈" lettering and vertical GAMEVIL mark stay visible.
+            corner = source.getpixel((0, 0))
+            background = (corner[0], corner[1], corner[2], 255)
+
             for folder, size in density_sizes.items():
                 out_dir = res_dir / folder
                 out_dir.mkdir(parents=True, exist_ok=True)
-                out = source.resize((size, size), Image.Resampling.LANCZOS)
-                out.save(out_dir / "ic_launcher.png", format="PNG", optimize=True)
+
+                canvas = Image.new("RGBA", (size, size), background)
+                inner_size = max(1, int(round(size * 0.80)))
+                icon = source.resize((inner_size, inner_size), Image.Resampling.LANCZOS)
+                x = (size - inner_size) // 2
+                y = (size - inner_size) // 2
+                canvas.alpha_composite(icon, (x, y))
+                canvas.save(out_dir / "ic_launcher.png", format="PNG", optimize=True)
     except Exception as exc:
         raise RuntimeError(
             "The embedded NOM launcher icon could not be decoded as an image."
