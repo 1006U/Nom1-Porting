@@ -107,7 +107,7 @@ def patch_build_files(engine: Path) -> None:
     open_replacement = """        open {
             applicationId "com.u1006.nom1"
             versionName "1.0.25-port1"
-            resValue 'string', 'app_name', 'NOM 1'
+            resValue 'string', 'app_name', '놈1'
             buildConfigField 'boolean', 'FULL_EMULATOR', 'true'
 """
     replace_once(app_gradle, open_start, open_replacement, "NOM open flavor configuration")
