@@ -44,6 +44,18 @@ MicroEdition-Configuration: CLDC-1.0
       - name: Apply NOM port patches
         run: python tools/prepare_engine.py --engine engine --jar game/nom1.jar
 
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Build open debug APK
+        working-directory: engine
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:assembleOpenDebug --stacktrace
+
       - name: Verify patched engine
         run: |
           grep -q "MIN_SDK = 24" engine/build.gradle
