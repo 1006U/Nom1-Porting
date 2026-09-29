@@ -194,6 +194,46 @@ def patch_build_files(engine: Path) -> None:
         )
 
 
+def patch_storage(engine: Path) -> None:
+    path = (
+        engine
+        / "app"
+        / "src"
+        / "main"
+        / "java"
+        / "ru"
+        / "playsoftware"
+        / "j2meloader"
+        / "config"
+        / "Config.java"
+    )
+
+    old = """\t\tSharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(context);
+\t\tString path = FileUtils.isExternalStorageLegacy() ?
+\t\t\t\tpreferences.getString(PREF_EMULATOR_DIR, null) :
+\t\t\t\tcontext.getExternalFilesDir(null).getPath();
+\t\tif (path == null) {
+\t\t\tpath = Environment.getExternalStorageDirectory() + "/" + appName;
+\t\t}
+\t\tinitDirs(path);
+"""
+
+    new = """\t\tSharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(context);
+
+\t\t// NOM is a dedicated standalone port. Keep all emulator/runtime files in
+\t\t// app-private internal storage so Android 7/8/9 devices (including Galaxy
+\t\t// S8) never depend on legacy external-storage permissions or mount state.
+\t\tString path = new File(context.getFilesDir(), "nom1-runtime").getPath();
+\t\tFile runtimeDir = new File(path);
+\t\tif (!runtimeDir.isDirectory() && !runtimeDir.mkdirs()) {
+\t\t\tthrow new IllegalStateException("Cannot create NOM runtime directory: " + path);
+\t\t}
+\t\tinitDirs(path);
+"""
+
+    replace_once(path, old, new, "NOM app-private runtime storage")
+
+
 def patch_installer(engine: Path) -> None:
     path = engine / "app" / "src" / "main" / "java" / "ru" / "woesss" / "j2me" / "installer" / "AppInstaller.java"
     old = """\tDescriptor getNewDescriptor() {
@@ -1080,6 +1120,7 @@ def main() -> int:
 
     copy_overlay(root, engine, jar_path)
     patch_build_files(engine)
+    patch_storage(engine)
     patch_installer(engine)
     patch_canvas(engine)
     patch_manifest(engine)
