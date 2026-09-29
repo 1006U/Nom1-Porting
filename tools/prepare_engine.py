@@ -214,6 +214,15 @@ def patch_installer(engine: Path) -> None:
 def patch_canvas(engine: Path) -> None:
     path = engine / "app" / "src" / "main" / "java" / "javax" / "microedition" / "lcdui" / "Canvas.java"
 
+    import_old = """import android.widget.LinearLayout;
+import android.widget.PopupWindow;
+"""
+    import_new = """import android.widget.Button;
+import android.widget.LinearLayout;
+import android.widget.PopupWindow;
+"""
+    replace_once(path, import_old, import_new, "NOM bottom button imports")
+
     fields_old = """\tprivate class ViewCallbacks implements View.OnTouchListener, SurfaceHolder.Callback, View.OnKeyListener {
 \t\tprivate final View mView;
 \t\tOverlayView overlayView;
@@ -302,6 +311,19 @@ def patch_canvas(engine: Path) -> None:
 \t\t\t}
 \t\t}
 
+\t\tprivate boolean setNomInstanceBoolean(String name, boolean value) {
+\t\t\ttry {
+\t\t\t\tjava.lang.reflect.Field field = findNomField(name, Boolean.TYPE, false);
+\t\t\t\tif (field == null) {
+\t\t\t\t\treturn false;
+\t\t\t\t}
+\t\t\t\tfield.setBoolean(Canvas.this, value);
+\t\t\t\treturn true;
+\t\t\t} catch (Throwable ignored) {
+\t\t\t\treturn false;
+\t\t\t}
+\t\t}
+
 \t\tprivate int invokeNomMenuY(String methodName, int index, boolean optionLayout) {
 \t\t\ttry {
 \t\t\t\tjava.lang.reflect.Method[] methods = Canvas.this.getClass().getDeclaredMethods();
@@ -376,7 +398,22 @@ def patch_canvas(engine: Path) -> None:
 
 \t\t\tint state = getNomStaticByte("c", -1);
 \t\t\tint page = getNomStaticInt("J", 0);
+\t\t\tint confirm = getNomStaticInt("K", 0);
 \t\t\tboolean paused = getNomStaticBoolean("q", false);
+
+\t\t\t// K=1: exit confirmation, K=2: return-to-main-menu confirmation.
+\t\t\t// NOM draws YES on the left and NO on the right.
+\t\t\tif (confirm != 0) {
+\t\t\t\tfloat virtualY = convertPointerY(y);
+\t\t\t\tif (virtualY >= height * 0.42f) {
+\t\t\t\t\tboolean yes = x < mView.getWidth() / 2.0f;
+\t\t\t\t\tif (setNomInstanceBoolean("k", yes)) {
+\t\t\t\t\t\tfireNomKey(KEY_NUM5);
+\t\t\t\t\t\treturn true;
+\t\t\t\t\t}
+\t\t\t\t}
+\t\t\t\treturn true;
+\t\t\t}
 
 \t\t\tif ((state == 2 && page == 0) || paused) {
 \t\t\t\tString[] items = getNomStaticStrings("a");
@@ -411,24 +448,16 @@ def patch_canvas(engine: Path) -> None:
 \t\t\treturn false;
 \t\t}
 
+\t\tprivate boolean isNomGameplay() {
+\t\t\treturn getNomStaticByte("c", -1) == 3
+\t\t\t\t\t&& !getNomStaticBoolean("q", false)
+\t\t\t\t\t&& getNomStaticInt("K", 0) == 0;
+\t\t}
+
 \t\tprivate int nomGameplayTouchKey(float x, float y) {
-\t\t\tfloat vx = convertPointerX(x);
-\t\t\tfloat vy = convertPointerY(y);
-\t\t\tfloat nx = vx / Math.max(1.0f, width);
-\t\t\tfloat ny = vy / Math.max(1.0f, height);
-
-\t\t\t// Center is the action/OK area. Everywhere else acts as a
-\t\t\t// direction pad, chosen by the dominant axis from screen center.
-\t\t\tif (nx >= 0.34f && nx <= 0.66f && ny >= 0.34f && ny <= 0.66f) {
-\t\t\t\treturn KEY_NUM5;
-\t\t\t}
-
-\t\t\tfloat dx = nx - 0.5f;
-\t\t\tfloat dy = ny - 0.5f;
-\t\t\tif (Math.abs(dx) > Math.abs(dy)) {
-\t\t\t\treturn dx < 0 ? KEY_NUM4 : KEY_NUM6;
-\t\t\t}
-\t\t\treturn dy < 0 ? KEY_NUM2 : KEY_NUM8;
+\t\t\t// NOM is a one-button game: every tap on the gameplay surface
+\t\t\t// is the action/OK key. Pause lives in the native bottom bar.
+\t\t\treturn KEY_NUM5;
 \t\t}
 
 \t\tprivate boolean handleNomTouch(MotionEvent event) {
@@ -474,10 +503,12 @@ def patch_canvas(engine: Path) -> None:
 \t\t\t\treturn true;
 \t\t\t}
 
-\t\t\tif (nomTouchY >= onY && nomTouchY <= onY + onHeight) {
-\t\t\t\tif (tryNomDirectMenuTap(nomTouchX, nomTouchY)) {
-\t\t\t\t\treturn true;
-\t\t\t\t}
+\t\t\tif (nomTouchY >= onY && nomTouchY <= onY + onHeight
+\t\t\t\t\t&& tryNomDirectMenuTap(nomTouchX, nomTouchY)) {
+\t\t\t\treturn true;
+\t\t\t}
+
+\t\t\tif (isNomGameplay()) {
 \t\t\t\tfireNomKey(nomGameplayTouchKey(nomTouchX, nomTouchY));
 \t\t\t\treturn true;
 \t\t\t}
@@ -485,9 +516,133 @@ def patch_canvas(engine: Path) -> None:
 \t\t\treturn true;
 \t\t}
 
+\t\tprivate LinearLayout nomButtonBar;
+\t\tprivate Button nomLeftButton;
+\t\tprivate Button nomRightButton;
+
+\t\tprivate final Runnable nomButtonUpdater = new Runnable() {
+\t\t\t@Override
+\t\t\tpublic void run() {
+\t\t\t\tif (nomButtonBar == null || nomButtonBar.getParent() == null) {
+\t\t\t\t\treturn;
+\t\t\t\t}
+\t\t\t\tupdateNomButtons();
+\t\t\t\tnomButtonBar.postDelayed(this, 120);
+\t\t\t}
+\t\t};
+
+\t\tprivate void attachNomButtonBar(LinearLayout parent) {
+\t\t\tif (!"b".equals(Canvas.this.getClass().getName())) {
+\t\t\t\treturn;
+\t\t\t}
+
+\t\t\tint barHeight = Math.round(TypedValue.applyDimension(
+\t\t\t\t\tTypedValue.COMPLEX_UNIT_DIP,
+\t\t\t\t\t52,
+\t\t\t\t\tmView.getResources().getDisplayMetrics()));
+
+\t\t\tnomButtonBar = new LinearLayout(mView.getContext());
+\t\t\tnomButtonBar.setOrientation(LinearLayout.HORIZONTAL);
+\t\t\tnomButtonBar.setGravity(Gravity.CENTER);
+
+\t\t\tnomLeftButton = new Button(mView.getContext());
+\t\t\tnomRightButton = new Button(mView.getContext());
+\t\t\tnomLeftButton.setAllCaps(false);
+\t\t\tnomRightButton.setAllCaps(false);
+\t\t\tnomLeftButton.setTextSize(16);
+\t\t\tnomRightButton.setTextSize(16);
+
+\t\t\tnomButtonBar.addView(nomLeftButton,
+\t\t\t\t\tnew LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1));
+\t\t\tnomButtonBar.addView(nomRightButton,
+\t\t\t\t\tnew LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1));
+
+\t\t\tnomLeftButton.setOnClickListener(v -> handleNomBottomButton(true));
+\t\t\tnomRightButton.setOnClickListener(v -> handleNomBottomButton(false));
+
+\t\t\tparent.addView(nomButtonBar,
+\t\t\t\t\tnew LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, barHeight));
+
+\t\t\tupdateNomButtons();
+\t\t\tnomButtonBar.post(nomButtonUpdater);
+\t\t}
+
+\t\tprivate void setNomButtonLabels(String left, String right) {
+\t\t\tif (nomLeftButton == null || nomRightButton == null) {
+\t\t\t\treturn;
+\t\t\t}
+\t\t\tnomLeftButton.setText(left == null ? "" : left);
+\t\t\tnomLeftButton.setVisibility(left == null ? View.GONE : View.VISIBLE);
+\t\t\tnomRightButton.setText(right == null ? "" : right);
+\t\t\tnomRightButton.setVisibility(right == null ? View.GONE : View.VISIBLE);
+\t\t}
+
+\t\tprivate void updateNomButtons() {
+\t\t\tint confirm = getNomStaticInt("K", 0);
+\t\t\tint state = getNomStaticByte("c", -1);
+\t\t\tint page = getNomStaticInt("J", 0);
+\t\t\tboolean paused = getNomStaticBoolean("q", false);
+
+\t\t\tif (confirm != 0) {
+\t\t\t\tsetNomButtonLabels("예", "아니오");
+\t\t\t} else if (state == 3 && !paused) {
+\t\t\t\tsetNomButtonLabels("일시정지", null);
+\t\t\t} else if (paused) {
+\t\t\t\tsetNomButtonLabels("확인", "뒤로");
+\t\t\t} else if (state == 2 && page == 0) {
+\t\t\t\tsetNomButtonLabels("확인", "종료");
+\t\t\t} else if (state == 2 && page == 1) {
+\t\t\t\tint selected = getNomStaticInt("I", -1);
+\t\t\t\tint optionMenuIndex = getNomStaticByte("i", -2);
+\t\t\t\tsetNomButtonLabels(selected == optionMenuIndex ? "변경" : "확인", "뒤로");
+\t\t\t} else {
+\t\t\t\tsetNomButtonLabels("확인", "뒤로");
+\t\t\t}
+\t\t}
+
+\t\tprivate void handleNomBottomButton(boolean left) {
+\t\t\tint confirm = getNomStaticInt("K", 0);
+\t\t\tif (confirm != 0) {
+\t\t\t\tif (setNomInstanceBoolean("k", left)) {
+\t\t\t\t\tfireNomKey(KEY_NUM5);
+\t\t\t\t}
+\t\t\t\treturn;
+\t\t\t}
+
+\t\t\tif (isNomGameplay()) {
+\t\t\t\tif (left) {
+\t\t\t\t\tfireNomKey(KEY_SOFT_LEFT);
+\t\t\t\t}
+\t\t\t\treturn;
+\t\t\t}
+
+\t\t\tfireNomKey(left ? KEY_NUM5 : KEY_SOFT_RIGHT);
+\t\t}
+
 \t\tpublic ViewCallbacks(View view) {
 """
     replace_once(path, fields_old, fields_new, "NOM direct-touch controls")
+
+    view_old = """\t\t\tViewCallbacks callback = new ViewCallbacks(innerView);
+\t\t\tinnerView.getHolder().addCallback(callback);
+\t\t\tinnerView.setOnTouchListener(callback);
+\t\t\tinnerView.setOnKeyListener(callback);
+\t\t\tinnerView.setFocusableInTouchMode(true);
+\t\t\tlayout.addView(innerView);
+\t\t\tinnerView.requestFocus();
+"""
+    view_new = """\t\t\tViewCallbacks callback = new ViewCallbacks(innerView);
+\t\t\tinnerView.getHolder().addCallback(callback);
+\t\t\tinnerView.setOnTouchListener(callback);
+\t\t\tinnerView.setOnKeyListener(callback);
+\t\t\tinnerView.setFocusableInTouchMode(true);
+\t\t\tinnerView.setLayoutParams(new LinearLayout.LayoutParams(
+\t\t\t\t\tViewGroup.LayoutParams.MATCH_PARENT, 0, 1));
+\t\t\tlayout.addView(innerView);
+\t\t\tcallback.attachNomButtonBar(layout);
+\t\t\tinnerView.requestFocus();
+"""
+    replace_once(path, view_old, view_new, "NOM native bottom button bar")
 
     touch_old = """\t\tpublic boolean onTouch(View v, MotionEvent event) {
 \t\t\tswitch (event.getActionMasked()) {
@@ -707,7 +862,7 @@ def main() -> int:
     print(f"  engine: {engine}")
     print("  minSdk: 24")
     print("  native 3D: disabled (NOM JAR does not use M3G/Micro3D)")
-    print("  controls: direct menu taps, gameplay touch zones, bottom-left=-6, bottom-right=-7")
+    print("  controls: direct menus, tap-anywhere gameplay action, dynamic bottom buttons")
     return 0
 
 
