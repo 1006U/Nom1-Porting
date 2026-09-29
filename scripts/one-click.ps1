@@ -1,7 +1,3 @@
-param(
-    [switch]$BuildOnly
-)
-
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
 Set-Location $Root
@@ -42,23 +38,8 @@ try {
     Write-Host "APK ready:"
     Write-Host "  $finalApk"
 
-    if (-not $BuildOnly) {
-        Write-Host ""
-        Write-Host "Installing NOM 1 on the connected Android device..."
-        & .\gradlew.bat :app:installOpenDebug
-        if ($LASTEXITCODE -ne 0) {
-            throw "Device installation failed. Check USB debugging and the connected device."
-        }
-
-        $adb = Join-Path $env:LOCALAPPDATA "Android\Sdk\platform-tools\adb.exe"
-        if (Test-Path $adb) {
-            Write-Host "Launching NOM 1..."
-            & $adb shell am start -n "com.u1006.nom1.debug/ru.woesss.j2me.installer.Nom1LauncherActivity"
-        }
-
-        Write-Host ""
-        Write-Host "Installed. From now on, tap the NOM 1 app icon on the phone."
-    }
+    Write-Host ""
+    Write-Host "APK generation complete. No device installation was attempted."
 } finally {
     Pop-Location
 }
