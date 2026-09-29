@@ -72,6 +72,8 @@ def patch_jar(source: Path, output: Path, patch_dir: Path, font: str | None = No
         ko = zf.read("text__ko.txt").decode("utf-8-sig")
         if "[menu]" not in ko or "새 게임" not in ko:
             raise RuntimeError("Korean translation validation failed")
+        if "[softkey]\n확인\n뒤로\n일시정지" not in ko:
+            raise RuntimeError("Korean softkey labels are missing")
 
     print(f"Korean NOM 1 JAR ready: {output}")
 
