@@ -669,6 +669,10 @@ import android.widget.PopupWindow;
 \t\t\tbutton.setPadding(nomDp(8), 0, nomDp(8), 0);
 \t\t\tbutton.setMinHeight(0);
 \t\t\tbutton.setMinimumHeight(0);
+\t\t\t// Keep controller focus on the game surface. These native buttons
+\t\t\t// remain fully touch/clickable but never consume D-pad navigation.
+\t\t\tbutton.setFocusable(false);
+\t\t\tbutton.setFocusableInTouchMode(false);
 \t\t\tbutton.setBackground(nomButtonBackground());
 \t\t}
 
