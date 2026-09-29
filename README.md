@@ -12,6 +12,12 @@ The original game JAR is intentionally **not committed**. Put a legally obtained
 - Android 7.0 / API 24 or newer
 - Portrait, aspect-ratio-preserving fullscreen rendering
 - No on-screen virtual keypad
+- Gamepad controls:
+  - D-pad / left analog stick -> J2ME `2/4/6/8`
+  - A / X / Y / R1 / R2 / stick click -> J2ME `5` / action
+  - B / Back -> J2ME right soft key `-7` / Back
+  - Start / Menu / Select -> J2ME left soft key `-6` / Pause
+  - USB and Bluetooth Android gamepads are handled through standard gamepad/joystick input sources
 - Touch-only controls:
   - Main/pause menu: tap the menu item itself
   - Options: tap the option row itself
