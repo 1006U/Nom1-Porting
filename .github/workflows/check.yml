@@ -59,6 +59,11 @@ jobs:
         run: |
           grep -q "MIN_SDK = 24" engine/build.gradle
           grep -q "com.u1006.nom1" engine/app/build.gradle
+          grep -q "resValue 'string', 'app_name', '놈1'" engine/app/build.gradle
+          ! grep -q "JL-Debug" engine/app/build.gradle
+          grep -q 'android:label="놈1"' engine/app/src/main/AndroidManifest.xml
+          grep -q 'android:icon="@drawable/nom1_icon"' engine/app/src/main/AndroidManifest.xml
+          test -f engine/app/src/main/res/drawable-nodpi/nom1_icon.png
           grep -q 'rootProject.file("keystore.properties").exists()' engine/app/build.gradle
           ! grep -q "externalNativeBuild" engine/app/build.gradle
           grep -q "Nom1LauncherActivity" engine/app/src/main/AndroidManifest.xml
