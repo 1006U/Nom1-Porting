@@ -521,6 +521,47 @@ import android.widget.PopupWindow;
 \t\tprivate Button nomLeftButton;
 \t\tprivate Button nomRightButton;
 
+\t\tprivate int nomDp(float value) {
+\t\t\treturn Math.round(TypedValue.applyDimension(
+\t\t\t\t\tTypedValue.COMPLEX_UNIT_DIP,
+\t\t\t\t\tvalue,
+\t\t\t\t\tmView.getResources().getDisplayMetrics()));
+\t\t}
+
+\t\tprivate android.graphics.drawable.GradientDrawable nomButtonShape(int color) {
+\t\t\tandroid.graphics.drawable.GradientDrawable shape =
+\t\t\t\t\tnew android.graphics.drawable.GradientDrawable();
+\t\t\tshape.setShape(android.graphics.drawable.GradientDrawable.RECTANGLE);
+\t\t\tshape.setColor(color);
+\t\t\tshape.setStroke(nomDp(2), android.graphics.Color.BLACK);
+\t\t\tshape.setCornerRadius(nomDp(3));
+\t\t\treturn shape;
+\t\t}
+
+\t\tprivate android.graphics.drawable.StateListDrawable nomButtonBackground() {
+\t\t\tandroid.graphics.drawable.StateListDrawable states =
+\t\t\t\t\tnew android.graphics.drawable.StateListDrawable();
+\t\t\tstates.addState(
+\t\t\t\t\tnew int[] { android.R.attr.state_pressed },
+\t\t\t\t\tnomButtonShape(android.graphics.Color.rgb(214, 132, 0)));
+\t\t\tstates.addState(
+\t\t\t\t\tnew int[] {},
+\t\t\t\t\tnomButtonShape(android.graphics.Color.rgb(255, 166, 0)));
+\t\t\treturn states;
+\t\t}
+
+\t\tprivate void styleNomButton(Button button) {
+\t\t\tbutton.setAllCaps(false);
+\t\t\tbutton.setTextColor(android.graphics.Color.BLACK);
+\t\t\tbutton.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+\t\t\tbutton.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+\t\t\tbutton.setGravity(Gravity.CENTER);
+\t\t\tbutton.setPadding(nomDp(8), 0, nomDp(8), 0);
+\t\t\tbutton.setMinHeight(0);
+\t\t\tbutton.setMinimumHeight(0);
+\t\t\tbutton.setBackground(nomButtonBackground());
+\t\t}
+
 \t\tprivate final Runnable nomButtonUpdater = new Runnable() {
 \t\t\t@Override
 \t\t\tpublic void run() {
@@ -537,26 +578,28 @@ import android.widget.PopupWindow;
 \t\t\t\treturn;
 \t\t\t}
 
-\t\t\tint barHeight = Math.round(TypedValue.applyDimension(
-\t\t\t\t\tTypedValue.COMPLEX_UNIT_DIP,
-\t\t\t\t\t52,
-\t\t\t\t\tmView.getResources().getDisplayMetrics()));
+\t\t\tint barHeight = nomDp(58);
 
 \t\t\tnomButtonBar = new LinearLayout(mView.getContext());
 \t\t\tnomButtonBar.setOrientation(LinearLayout.HORIZONTAL);
 \t\t\tnomButtonBar.setGravity(Gravity.CENTER);
+\t\t\tnomButtonBar.setBackgroundColor(android.graphics.Color.rgb(12, 12, 12));
+\t\t\tnomButtonBar.setPadding(nomDp(6), nomDp(6), nomDp(6), nomDp(6));
 
 \t\t\tnomLeftButton = new Button(mView.getContext());
 \t\t\tnomRightButton = new Button(mView.getContext());
-\t\t\tnomLeftButton.setAllCaps(false);
-\t\t\tnomRightButton.setAllCaps(false);
-\t\t\tnomLeftButton.setTextSize(16);
-\t\t\tnomRightButton.setTextSize(16);
+\t\t\tstyleNomButton(nomLeftButton);
+\t\t\tstyleNomButton(nomRightButton);
 
-\t\t\tnomButtonBar.addView(nomLeftButton,
-\t\t\t\t\tnew LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1));
-\t\t\tnomButtonBar.addView(nomRightButton,
-\t\t\t\t\tnew LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1));
+\t\t\tLinearLayout.LayoutParams leftParams =
+\t\t\t\t\tnew LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1);
+\t\t\tleftParams.setMargins(0, 0, nomDp(3), 0);
+\t\t\tLinearLayout.LayoutParams rightParams =
+\t\t\t\t\tnew LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1);
+\t\t\trightParams.setMargins(nomDp(3), 0, 0, 0);
+
+\t\t\tnomButtonBar.addView(nomLeftButton, leftParams);
+\t\t\tnomButtonBar.addView(nomRightButton, rightParams);
 
 \t\t\tnomLeftButton.setOnClickListener(v -> handleNomBottomButton(true));
 \t\t\tnomRightButton.setOnClickListener(v -> handleNomBottomButton(false));
@@ -761,77 +804,146 @@ def copy_overlay(root: Path, engine: Path, jar_path: Path) -> None:
 
 
 def patch_app_icon(root: Path, engine: Path) -> None:
-    # The launcher artwork is stored as vector path data instead of a binary
-    # PNG/JPG. This keeps Git transport text-only and avoids broken image/base64
-    # assets while preserving the important NOM lettering and silhouette.
+    icon_src = root / "branding" / "app_icon.jpg"
+    if not icon_src.is_file():
+        raise FileNotFoundError(f"NOM launcher icon not found: {icon_src}")
+
+    try:
+        from PIL import Image
+    except ImportError as exc:
+        raise RuntimeError(
+            "Pillow is required to generate Android launcher icons. "
+            "Run: python -m pip install --user Pillow"
+        ) from exc
+
     res_dir = engine / "app" / "src" / "main" / "res"
-    drawable_dir = res_dir / "drawable"
-    drawable_dir.mkdir(parents=True, exist_ok=True)
 
-    black_path = "M120,168 L124,167 L125,171 L123,172 Z M130,157 L131,158 L130,162 L121,162 L117,166 L117,169 L123,175 L119,178 L119,181 L116,184 L113,184 L110,180 L107,180 L106,182 L104,181 L104,158 L105,157 Z M99,152 L99,201 L104,201 L104,188 L109,183 L115,189 L118,189 L125,181 L127,183 L130,183 L131,185 L134,185 L139,191 L142,191 L144,189 L144,186 L142,188 L139,188 L138,184 L130,176 L131,175 L136,175 L137,173 L142,173 L142,170 L139,170 L138,172 L133,172 L132,171 L132,166 L136,163 L136,158 L137,157 L150,157 L150,152 Z M180,138 L175,138 L175,221 L174,222 L81,222 L81,226 L82,227 L180,227 Z M180,104 L175,104 L175,119 L174,120 L81,120 L81,125 L180,125 Z M81,86 L81,91 L112,91 L112,86 Z M180,70 L175,70 L175,85 L174,86 L137,86 L137,97 L142,97 L142,92 L143,91 L180,91 Z M31,48 L32,51 L39,54 L38,56 L35,56 L34,58 L31,58 L31,61 L36,61 L37,59 L40,59 L41,57 L44,57 L44,52 L41,52 L40,50 L37,50 L36,48 Z M31,42 L31,45 L44,45 L44,42 Z M44,28 L41,28 L41,35 L40,36 L32,36 L31,39 L44,39 Z M99,24 L99,63 L104,63 L104,24 Z M27,18 L23,22 L23,26 L24,27 L24,22 L27,19 L32,19 L35,22 L35,25 L33,26 L30,22 L27,24 L29,27 L31,25 L33,26 L32,30 L27,30 L27,31 L32,31 L34,29 L34,26 L38,25 L38,24 L32,18 Z M2,2 L3,1 L242,1 L243,2 L243,241 L242,242 L3,242 L2,241 Z M0,0 L0,243 L245,243 L245,0 Z"
-    white_path = "M98,152 L99,151 L150,151 L152,157 L152,201 L150,203 L106,203 L105,202 L104,203 L99,202 L98,201 Z M173,133 L171,132 L170,133 L164,133 L163,132 L159,133 L77,133 L76,134 L76,220 L80,221 L81,220 L82,221 L173,221 L174,220 L174,139 L172,137 Z M32,132 L38,135 L43,132 L36,133 L33,131 Z M32,122 L32,129 L33,129 L33,122 Z M39,120 L39,122 L42,124 L42,129 L43,129 L43,123 Z M34,103 L32,107 L33,108 L32,109 L33,115 L34,116 L43,116 L41,114 L37,115 L33,113 L34,105 L35,104 L38,105 L43,103 L38,102 Z M43,90 L41,88 L37,90 Z M114,87 L115,86 L116,87 L115,88 Z M32,87 L32,92 L33,93 L32,96 L36,99 L42,98 L41,96 L36,97 L33,95 L33,92 L35,91 Z M43,83 L38,82 L34,83 L32,85 L43,84 Z M42,66 L42,71 L43,71 L43,66 Z M32,66 L32,76 L35,79 L39,78 L40,79 L43,76 L43,73 L39,78 L34,76 L32,74 L33,73 L33,66 Z M76,19 L77,23 L76,24 L76,79 L77,80 L76,83 L77,84 L81,83 L82,85 L113,85 L114,86 L113,90 L115,93 L115,96 L113,99 L76,99 L77,103 L76,104 L76,117 L80,119 L174,119 L174,104 L172,102 L173,100 L171,98 L170,99 L144,99 L135,97 L136,96 L136,85 L137,84 L138,85 L173,85 L174,84 L174,71 L172,68 L172,65 L171,64 L169,65 L167,64 L99,64 L98,63 L98,24 L96,22 L97,21 L96,19 Z"
+    legacy_sizes = {
+        "mipmap-mdpi": 48,
+        "mipmap-hdpi": 72,
+        "mipmap-xhdpi": 96,
+        "mipmap-xxhdpi": 144,
+        "mipmap-xxxhdpi": 192,
+    }
+    adaptive_sizes = {
+        "mipmap-mdpi": 108,
+        "mipmap-hdpi": 162,
+        "mipmap-xhdpi": 216,
+        "mipmap-xxhdpi": 324,
+        "mipmap-xxxhdpi": 432,
+    }
 
-    vector_xml = f"""<?xml version="1.0" encoding="utf-8"?>
-<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="108dp"
-    android:height="108dp"
-    android:viewportWidth="246"
-    android:viewportHeight="244">
+    try:
+        with Image.open(icon_src) as opened:
+            opened.load()
+            source = opened.convert("RGBA")
 
-    <path
-        android:fillColor="#FFA000"
-        android:pathData="M0,0 L246,0 L246,244 L0,244 Z" />
+            if source.size != (246, 244):
+                print(
+                    f"warning: launcher icon size is {source.size}; "
+                    "the supplied reference image was 246x244",
+                    file=sys.stderr,
+                )
 
-    <!-- Uniformly scale the complete original artwork into the launcher safe
-         zone. Nothing is cropped or stretched; only orange margin is added. -->
-    <group
-        android:pivotX="123"
-        android:pivotY="122"
-        android:scaleX="0.72"
-        android:scaleY="0.72">
+            # The source artwork uses an orange field. Sample a central point
+            # away from its black outer border and use that as padding so the
+            # original image remains untouched and fully visible.
+            sample_x = min(source.width - 1, max(0, source.width // 4))
+            sample_y = min(source.height - 1, max(0, source.height // 4))
+            pixel = source.getpixel((sample_x, sample_y))
+            orange = (pixel[0], pixel[1], pixel[2], 255)
 
-        <path
-            android:fillColor="#000000"
-            android:fillType="evenOdd"
-            android:pathData="{{black_path}}" />
+            def fit_without_crop(canvas_size: int, content_ratio: float, transparent: bool):
+                canvas = Image.new(
+                    "RGBA",
+                    (canvas_size, canvas_size),
+                    (0, 0, 0, 0) if transparent else orange,
+                )
+                max_box = max(1, int(round(canvas_size * content_ratio)))
+                scale = min(max_box / source.width, max_box / source.height)
+                width = max(1, int(round(source.width * scale)))
+                height = max(1, int(round(source.height * scale)))
+                art = source.resize((width, height), Image.Resampling.LANCZOS)
+                x = (canvas_size - width) // 2
+                y = (canvas_size - height) // 2
+                canvas.alpha_composite(art, (x, y))
+                return canvas
 
-        <path
-            android:fillColor="#FFFFFF"
-            android:fillType="evenOdd"
-            android:pathData="{{white_path}}" />
-    </group>
-</vector>
+            # Legacy launchers may also apply their own mask. 72% keeps the
+            # complete "놈" artwork and vertical GAMEVIL mark inside a safe zone.
+            for folder, size in legacy_sizes.items():
+                out_dir = res_dir / folder
+                out_dir.mkdir(parents=True, exist_ok=True)
+                fit_without_crop(size, 0.72, False).save(
+                    out_dir / "ic_launcher.png",
+                    format="PNG",
+                    optimize=True,
+                )
+
+            # Adaptive foreground canvases are larger than the visible icon.
+            # Keeping the unmodified artwork inside 60% guarantees that even
+            # Samsung's circular/squircle masks do not cut the NOM lettering.
+            for folder, size in adaptive_sizes.items():
+                out_dir = res_dir / folder
+                out_dir.mkdir(parents=True, exist_ok=True)
+                fit_without_crop(size, 0.60, True).save(
+                    out_dir / "ic_launcher_foreground.png",
+                    format="PNG",
+                    optimize=True,
+                )
+
+            drawable_dir = res_dir / "drawable"
+            drawable_dir.mkdir(parents=True, exist_ok=True)
+            color_hex = "#{:02X}{:02X}{:02X}".format(
+                orange[0], orange[1], orange[2]
+            )
+            (drawable_dir / "nom1_icon_background.xml").write_text(
+                f"""<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="{color_hex}" />
+</shape>
+""",
+                encoding="utf-8",
+            )
+
+            adaptive_dir = res_dir / "mipmap-anydpi-v26"
+            adaptive_dir.mkdir(parents=True, exist_ok=True)
+            adaptive_xml = """<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@drawable/nom1_icon_background" />
+    <foreground android:drawable="@mipmap/ic_launcher_foreground" />
+</adaptive-icon>
 """
-    (drawable_dir / "nom1_icon.xml").write_text(vector_xml, encoding="utf-8")
+            (adaptive_dir / "ic_launcher.xml").write_text(
+                adaptive_xml, encoding="utf-8"
+            )
+            (adaptive_dir / "ic_launcher_round.xml").write_text(
+                adaptive_xml, encoding="utf-8"
+            )
 
-    # Remove J2ME Loader's adaptive icon so Samsung/Android cannot substitute
-    # the original JL foreground/background artwork.
-    adaptive_icon = res_dir / "mipmap-anydpi-v26" / "ic_launcher.xml"
-    if adaptive_icon.exists():
-        adaptive_icon.unlink()
+    except Exception as exc:
+        raise RuntimeError(
+            f"Could not generate Android launcher icons from {icon_src}"
+        ) from exc
 
-    for folder in (
-        "mipmap-mdpi",
-        "mipmap-hdpi",
-        "mipmap-xhdpi",
-        "mipmap-xxhdpi",
-        "mipmap-xxxhdpi",
-    ):
-        foreground = res_dir / folder / "ic_launcher_foreground.png"
-        if foreground.exists():
-            foreground.unlink()
+    # Remove the old generated vector icon so it can never override the exact
+    # supplied artwork.
+    old_vector = res_dir / "drawable" / "nom1_icon.xml"
+    if old_vector.exists():
+        old_vector.unlink()
 
     manifest = engine / "app" / "src" / "main" / "AndroidManifest.xml"
     text = manifest.read_text(encoding="utf-8")
     text = re.sub(
         r'android:icon="[^"]+"',
-        'android:icon="@drawable/nom1_icon"',
+        'android:icon="@mipmap/ic_launcher"',
         text,
         count=1,
     )
     text = re.sub(
         r'android:roundIcon="[^"]+"',
-        'android:roundIcon="@drawable/nom1_icon"',
+        'android:roundIcon="@mipmap/ic_launcher_round"',
         text,
         count=1,
     )
@@ -842,9 +954,9 @@ def patch_app_icon(root: Path, engine: Path) -> None:
         count=1,
     )
 
-    if 'android:icon="@drawable/nom1_icon"' not in text:
-        raise RuntimeError("Could not set NOM launcher icon in AndroidManifest.xml")
-    if 'android:roundIcon="@drawable/nom1_icon"' not in text:
+    if 'android:icon="@mipmap/ic_launcher"' not in text:
+        raise RuntimeError("Could not set NOM launcher icon")
+    if 'android:roundIcon="@mipmap/ic_launcher_round"' not in text:
         raise RuntimeError("Could not set NOM round launcher icon")
     if 'android:label="놈1"' not in text:
         raise RuntimeError("Could not set NOM Android app label")
