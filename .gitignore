@@ -1,0 +1,26 @@
+# Generated J2ME Loader checkout
+engine/
+
+# Original game binary (do not publish)
+game/*.jar
+!game/README.md
+
+# Android / Gradle
+.gradle/
+local.properties
+**/build/
+*.apk
+*.aab
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Python
+__pycache__/
+*.pyc
+
+# OS
+.DS_Store
+Thumbs.db
