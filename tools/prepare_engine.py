@@ -408,7 +408,8 @@ import android.widget.PopupWindow;
 \t\t\t\tif (virtualY >= height * 0.42f) {
 \t\t\t\t\tboolean yes = x < mView.getWidth() / 2.0f;
 \t\t\t\t\tif (setNomInstanceBoolean("k", yes)) {
-\t\t\t\t\t\tfireNomKey(KEY_NUM5);
+\t\t\t\t\t\t// NOM confirmation dialogs commit YES/NO with soft-left (-6).
+\t\t\t\t\t\tfireNomKey(KEY_SOFT_LEFT);
 \t\t\t\t\t\treturn true;
 \t\t\t\t\t}
 \t\t\t\t}
@@ -604,7 +605,8 @@ import android.widget.PopupWindow;
 \t\t\tint confirm = getNomStaticInt("K", 0);
 \t\t\tif (confirm != 0) {
 \t\t\t\tif (setNomInstanceBoolean("k", left)) {
-\t\t\t\t\tfireNomKey(KEY_NUM5);
+\t\t\t\t\t// Execute the selected YES/NO value using NOM's soft-left key.
+\t\t\t\t\tfireNomKey(KEY_SOFT_LEFT);
 \t\t\t\t}
 \t\t\t\treturn;
 \t\t\t}
