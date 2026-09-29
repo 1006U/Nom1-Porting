@@ -19,7 +19,16 @@ if [[ ! -d "$ENGINE/.git" ]]; then
   git clone --depth 1 --branch "$TAG" "$UPSTREAM" "$ENGINE"
 fi
 
-python3 tools/prepare_engine.py --engine "$ENGINE" --jar "$JAR"
+if ! python3 -c "import PIL" >/dev/null 2>&1; then
+  echo "Installing Pillow for Korean bitmap font generation..."
+  python3 -m pip install --user Pillow
+fi
+
+PATCHED_JAR="game/generated/nom1-ko.jar"
+echo "Creating Korean NOM 1 JAR..."
+python3 tools/patch_korean.py --input "$JAR" --output "$PATCHED_JAR"
+
+python3 tools/prepare_engine.py --engine "$ENGINE" --jar "$PATCHED_JAR"
 
 echo
 echo "NOM 1 port workspace is ready."
