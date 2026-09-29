@@ -81,6 +81,22 @@ powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1
 You do **not** need to create a release keystore to build or run `:app:assembleOpenDebug`.
 A keystore is only needed later when you want a signed release APK.
 
+### If the build fails at `configureNdkBuildDebug`
+
+Pull the latest port scripts and run setup again. NOM 1 does not use JSR-184 M3G or
+Mascot Capsule Micro3D, so this dedicated port disables J2ME Loader's unnecessary
+native 3D/NDK build:
+
+```powershell
+git pull
+powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1
+cd engine
+.\gradlew.bat clean
+.\gradlew.bat :app:assembleOpenDebug
+```
+
+This removes the NDK configuration step entirely for NOM 1.
+
 ## Known source JAR used for initial analysis
 
 The uploaded reference build identified itself as:
