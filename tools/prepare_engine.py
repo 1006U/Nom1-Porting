@@ -207,14 +207,48 @@ def patch_canvas(engine: Path) -> None:
 \t\tprivate float nomGestureStartX;
 \t\tprivate float nomGestureStartY;
 \t\tprivate boolean nomGestureActive;
+\t\tprivate int nomSoftKey;
+
+\t\tprivate void fireNomKey(int keyCode) {
+\t\t\tpostKeyPressed(keyCode);
+\t\t\tpostKeyReleased(keyCode);
+\t\t}
 
 \t\tprivate boolean handleNomGesture(MotionEvent event) {
 \t\t\tint action = event.getActionMasked();
 
 \t\t\tif (action == MotionEvent.ACTION_DOWN && event.getPointerCount() == 1) {
-\t\t\t\tnomGestureStartX = event.getX();
-\t\t\t\tnomGestureStartY = event.getY();
+\t\t\t\tfloat x = event.getX();
+\t\t\t\tfloat y = event.getY();
+
+\t\t\t\t// Use the bottom letterbox area as touch-only J2ME soft keys.
+\t\t\t\t// Left half = pause/left soft key (-6).
+\t\t\t\t// Right half = back/right soft key (-7).
+\t\t\t\tif (y > onY + onHeight) {
+\t\t\t\t\tnomSoftKey = x < mView.getWidth() / 2.0f
+\t\t\t\t\t\t\t? KEY_SOFT_LEFT : KEY_SOFT_RIGHT;
+\t\t\t\t\tnomGestureActive = false;
+\t\t\t\t\treturn true;
+\t\t\t\t}
+
+\t\t\t\tnomSoftKey = 0;
+\t\t\t\tnomGestureStartX = x;
+\t\t\t\tnomGestureStartY = y;
 \t\t\t\tnomGestureActive = true;
+\t\t\t\treturn true;
+\t\t\t}
+
+\t\t\tif (nomSoftKey != 0) {
+\t\t\t\tif (action == MotionEvent.ACTION_UP) {
+\t\t\t\t\tint keyCode = nomSoftKey;
+\t\t\t\t\tnomSoftKey = 0;
+\t\t\t\t\tfireNomKey(keyCode);
+\t\t\t\t\treturn true;
+\t\t\t\t}
+\t\t\t\tif (action == MotionEvent.ACTION_CANCEL
+\t\t\t\t\t\t|| action == MotionEvent.ACTION_POINTER_DOWN) {
+\t\t\t\t\tnomSoftKey = 0;
+\t\t\t\t}
 \t\t\t\treturn true;
 \t\t\t}
 
@@ -256,8 +290,7 @@ def patch_canvas(engine: Path) -> None:
 \t\t\t\tkeyCode = dy < 0 ? KEY_NUM2 : KEY_NUM8;
 \t\t\t}
 
-\t\t\tpostKeyPressed(keyCode);
-\t\t\tpostKeyReleased(keyCode);
+\t\t\tfireNomKey(keyCode);
 \t\t\treturn true;
 \t\t}
 
@@ -442,7 +475,7 @@ def main() -> int:
     print(f"  engine: {engine}")
     print("  minSdk: 24")
     print("  native 3D: disabled (NOM JAR does not use M3G/Micro3D)")
-    print("  controls: tap=5, swipes=2/4/6/8")
+    print("  controls: tap=5, swipes=2/4/6/8, bottom-left=-6, bottom-right=-7")
     return 0
 
 
