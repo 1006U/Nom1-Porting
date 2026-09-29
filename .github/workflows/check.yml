@@ -65,5 +65,5 @@ MicroEdition-Configuration: CLDC-1.0
           grep -q "Nom1LauncherActivity" engine/app/src/main/AndroidManifest.xml
           grep -q "handleNomGesture" engine/app/src/main/java/javax/microedition/lcdui/Canvas.java
           grep -q "KEY_NUM5" engine/app/src/main/java/javax/microedition/lcdui/Canvas.java
-          test -f engine/app/src/open/java/ru/woesss/j2me/installer/Nom1LauncherActivity.java
-          test -f engine/app/src/open/assets/nom1/nom1.jar
+          test -f engine/app/src/main/java/ru/woesss/j2me/installer/Nom1LauncherActivity.java
+          test -f engine/app/src/main/assets/nom1/nom1.jar
