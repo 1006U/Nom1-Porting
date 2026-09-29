@@ -892,7 +892,8 @@ def patch_manifest(engine: Path) -> None:
     launcher_activity = """        <activity
             android:name="ru.woesss.j2me.installer.Nom1LauncherActivity"
             android:exported="true"
-            android:screenOrientation="portrait"
+            android:screenOrientation="sensor"
+            android:configChanges="orientation|screenSize"
             android:theme="@style/AppTheme.NoActionBar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -916,12 +917,13 @@ def patch_manifest(engine: Path) -> None:
     micro_new = """        <activity
             android:name="javax.microedition.shell.MicroActivity"
             android:exported="false"
-            android:screenOrientation="portrait"
+            android:screenOrientation="sensor"
+            android:configChanges="orientation|screenSize"
             android:theme="@style/AppTheme.NoActionBar"
 """
     if micro_new not in text:
         if micro_old not in text:
-            raise RuntimeError("Could not patch MicroActivity portrait orientation")
+            raise RuntimeError("Could not patch MicroActivity sensor orientation")
         text = text.replace(micro_old, micro_new, 1)
 
     path.write_text(text, encoding="utf-8")
@@ -1132,7 +1134,7 @@ def main() -> int:
     print(f"  engine: {engine}")
     print("  minSdk: 24")
     print("  native 3D: disabled (NOM JAR does not use M3G/Micro3D)")
-    print("  controls: direct menus, tap-anywhere gameplay action, dynamic bottom buttons")
+    print("  display: portrait + landscape sensor rotation, aspect-fit max upscale")\n    print("  controls: direct menus, tap-anywhere gameplay action, dynamic bottom buttons")
     return 0
 
 
