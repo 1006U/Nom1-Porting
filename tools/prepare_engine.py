@@ -599,48 +599,75 @@ def copy_overlay(root: Path, engine: Path, jar_path: Path) -> None:
 def patch_app_icon(root: Path, engine: Path) -> None:
     icon_src = root / "branding" / "app_icon.png"
     if not icon_src.is_file():
-        return
+        raise FileNotFoundError(f"NOM launcher icon not found: {icon_src}")
 
-    icon_dst = (
-        engine
-        / "app"
-        / "src"
-        / "main"
-        / "res"
-        / "drawable-nodpi"
-        / "nom1_icon.png"
-    )
-    icon_dst.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(icon_src, icon_dst)
+    try:
+        from PIL import Image
+    except ImportError as exc:
+        raise RuntimeError(
+            "Pillow is required to generate Android launcher icons. "
+            "Run: python -m pip install --user Pillow"
+        ) from exc
+
+    res_dir = engine / "app" / "src" / "main" / "res"
+    density_sizes = {
+        "mipmap-mdpi": 48,
+        "mipmap-hdpi": 72,
+        "mipmap-xhdpi": 96,
+        "mipmap-xxhdpi": 144,
+        "mipmap-xxxhdpi": 192,
+    }
+
+    with Image.open(icon_src) as source:
+        source = source.convert("RGBA")
+        for folder, size in density_sizes.items():
+            out_dir = res_dir / folder
+            out_dir.mkdir(parents=True, exist_ok=True)
+            out = source.resize((size, size), Image.Resampling.LANCZOS)
+            out.save(out_dir / "ic_launcher.png", format="PNG", optimize=True)
+
+    # Android 8+ prefers the upstream adaptive icon XML over the bitmap
+    # resources. Remove it so Galaxy launchers must use our NOM bitmap icon
+    # instead of J2ME Loader's foreground/background artwork.
+    adaptive_icon = res_dir / "mipmap-anydpi-v26" / "ic_launcher.xml"
+    if adaptive_icon.exists():
+        adaptive_icon.unlink()
+
+    # Remove upstream adaptive foreground bitmaps as well. They are no longer
+    # referenced, and deleting them prevents accidental reuse by future merges.
+    for folder in density_sizes:
+        foreground = res_dir / folder / "ic_launcher_foreground.png"
+        if foreground.exists():
+            foreground.unlink()
 
     manifest = engine / "app" / "src" / "main" / "AndroidManifest.xml"
     text = manifest.read_text(encoding="utf-8")
     text = re.sub(
-        r'android:icon="@mipmap/ic_launcher"',
-        'android:icon="@drawable/nom1_icon"',
+        r'android:icon="[^"]+"',
+        'android:icon="@mipmap/ic_launcher"',
         text,
         count=1,
     )
     text = re.sub(
-        r'android:roundIcon="@mipmap/ic_launcher"',
-        'android:roundIcon="@drawable/nom1_icon"',
+        r'android:roundIcon="[^"]+"',
+        'android:roundIcon="@mipmap/ic_launcher"',
         text,
         count=1,
     )
-
-    # Make the final merged manifest independent from J2ME Loader's
-    # flavor/debug resource overrides.
     text = re.sub(
-        r'android:label="@string/app_name"',
+        r'android:label="[^"]+"',
         'android:label="놈1"',
         text,
         count=1,
     )
 
-    if 'android:icon="@drawable/nom1_icon"' not in text:
+    if 'android:icon="@mipmap/ic_launcher"' not in text:
         raise RuntimeError("Could not set NOM launcher icon in AndroidManifest.xml")
+    if 'android:roundIcon="@mipmap/ic_launcher"' not in text:
+        raise RuntimeError("Could not set NOM round launcher icon")
     if 'android:label="놈1"' not in text:
         raise RuntimeError("Could not set NOM Android app label")
+
     manifest.write_text(text, encoding="utf-8")
 
 
