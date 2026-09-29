@@ -39,7 +39,10 @@ MicroEdition-Configuration: CLDC-1.0
               zf.writestr("META-INF/MANIFEST.MF", manifest)
 
       - name: Check Python syntax
-        run: python -m py_compile tools/prepare_engine.py
+        run: |
+          python -m py_compile tools/prepare_engine.py
+          python -m py_compile tools/patch_korean.py
+          python -m py_compile tools/generate_korean_fonts.py
 
       - name: Apply NOM port patches
         run: python tools/prepare_engine.py --engine engine --jar game/nom1.jar
