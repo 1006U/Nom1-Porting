@@ -66,7 +66,7 @@ MicroEdition-Configuration: CLDC-1.0
           grep -q 'rootProject.file("keystore.properties").exists()' engine/app/build.gradle
           ! grep -q "externalNativeBuild" engine/app/build.gradle
           grep -q "Nom1LauncherActivity" engine/app/src/main/AndroidManifest.xml
-          grep -q "handleNomGesture" engine/app/src/main/java/javax/microedition/lcdui/Canvas.java
-          grep -q "KEY_NUM5" engine/app/src/main/java/javax/microedition/lcdui/Canvas.java
+          grep -q "handleNomTouch" engine/app/src/main/java/javax/microedition/lcdui/Canvas.java
+          grep -q "tryNomDirectMenuTap" engine/app/src/main/java/javax/microedition/lcdui/Canvas.java\n          grep -q "KEY_NUM5" engine/app/src/main/java/javax/microedition/lcdui/Canvas.java\n          ! grep -q "swipeThreshold" engine/app/src/main/java/javax/microedition/lcdui/Canvas.java
           test -f engine/app/src/main/java/ru/woesss/j2me/installer/Nom1LauncherActivity.java
           test -f engine/app/src/main/assets/nom1/nom1.jar
