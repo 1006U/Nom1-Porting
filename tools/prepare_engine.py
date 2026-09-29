@@ -1135,7 +1135,8 @@ def main() -> int:
     print(f"  engine: {engine}")
     print("  minSdk: 24")
     print("  native 3D: disabled (NOM JAR does not use M3G/Micro3D)")
-    print("  display: portrait + landscape sensor rotation, aspect-fit max upscale")\n    print("  controls: direct menus, tap-anywhere gameplay action, dynamic bottom buttons")
+    print("  display: portrait + landscape sensor rotation, aspect-fit max upscale")
+    print("  controls: direct menus, tap-anywhere gameplay action, dynamic bottom buttons")
     return 0
 
 
