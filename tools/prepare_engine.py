@@ -275,7 +275,7 @@ import android.widget.PopupWindow;
 \t\t\t\t\treturn KEY_NUM5;
 
 \t\t\t\tcase KeyEvent.KEYCODE_BUTTON_B:
-\t\t\t\tcase KeyEvent.KEYCODE_BUTTON_BACK:
+\t\t\t\tcase KeyEvent.KEYCODE_BACK:
 \t\t\t\t\treturn KEY_SOFT_RIGHT;
 
 \t\t\t\tcase KeyEvent.KEYCODE_BUTTON_START:
