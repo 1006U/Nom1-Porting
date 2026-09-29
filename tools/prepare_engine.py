@@ -782,54 +782,112 @@ def patch_app_icon(root: Path, engine: Path) -> None:
         raise RuntimeError(f"Could not decode NOM launcher icon: {icon_b64}") from exc
 
     res_dir = engine / "app" / "src" / "main" / "res"
-    density_sizes = {
+    legacy_sizes = {
         "mipmap-mdpi": 48,
         "mipmap-hdpi": 72,
         "mipmap-xhdpi": 96,
         "mipmap-xxhdpi": 144,
         "mipmap-xxxhdpi": 192,
     }
+    adaptive_sizes = {
+        "mipmap-mdpi": 108,
+        "mipmap-hdpi": 162,
+        "mipmap-xhdpi": 216,
+        "mipmap-xxhdpi": 324,
+        "mipmap-xxxhdpi": 432,
+    }
 
     try:
-        with Image.open(io.BytesIO(icon_bytes)) as source:
-            source.load()
-            source = source.convert("RGBA")
+        with Image.open(io.BytesIO(icon_bytes)) as opened:
+            opened.load()
+            source = opened.convert("RGBA")
 
-            # Samsung/Android launchers crop the outer edge of legacy bitmap
-            # icons. Keep the original NOM artwork inside an 80% safe area so
-            # the large "놈" lettering and vertical GAMEVIL mark stay visible.
-            corner = source.getpixel((0, 0))
-            background = (corner[0], corner[1], corner[2], 255)
+            # Find the dominant source color instead of sampling a corner.
+            # The provided artwork has a dark border, while the real background
+            # is orange.
+            quantized = source.convert("RGB").resize((64, 64)).quantize(colors=16)
+            color_counts = quantized.getcolors()
+            if not color_counts:
+                raise RuntimeError("Could not determine NOM icon background color")
+            dominant_index = max(color_counts, key=lambda item: item[0])[1]
+            palette = quantized.getpalette()
+            base = dominant_index * 3
+            background = (
+                palette[base],
+                palette[base + 1],
+                palette[base + 2],
+                255,
+            )
 
-            for folder, size in density_sizes.items():
+            def fitted_art(canvas_size: int, content_ratio: float, transparent: bool):
+                canvas_color = (0, 0, 0, 0) if transparent else background
+                canvas = Image.new("RGBA", (canvas_size, canvas_size), canvas_color)
+
+                max_box = max(1, int(round(canvas_size * content_ratio)))
+                src_w, src_h = source.size
+                scale = min(max_box / src_w, max_box / src_h)
+                dst_w = max(1, int(round(src_w * scale)))
+                dst_h = max(1, int(round(src_h * scale)))
+
+                # Uniform scaling only: no crop and no aspect-ratio distortion.
+                art = source.resize((dst_w, dst_h), Image.Resampling.LANCZOS)
+                x = (canvas_size - dst_w) // 2
+                y = (canvas_size - dst_h) // 2
+                canvas.alpha_composite(art, (x, y))
+                return canvas
+
+            for folder, size in legacy_sizes.items():
                 out_dir = res_dir / folder
                 out_dir.mkdir(parents=True, exist_ok=True)
 
-                canvas = Image.new("RGBA", (size, size), background)
-                inner_size = max(1, int(round(size * 0.80)))
-                icon = source.resize((inner_size, inner_size), Image.Resampling.LANCZOS)
-                x = (size - inner_size) // 2
-                y = (size - inner_size) // 2
-                canvas.alpha_composite(icon, (x, y))
-                canvas.save(out_dir / "ic_launcher.png", format="PNG", optimize=True)
+                # Legacy launchers can still mask bitmap icons. Keep the full
+                # original artwork inside a generous safe area.
+                fitted_art(size, 0.70, False).save(
+                    out_dir / "ic_launcher.png",
+                    format="PNG",
+                    optimize=True,
+                )
+
+                # Adaptive icons use a 108dp foreground canvas with a central
+                # ~66dp guaranteed safe zone. Keep the entire original image
+                # inside that zone, unchanged except for proportional scaling.
+                fg_size = adaptive_sizes[folder]
+                fitted_art(fg_size, 0.60, True).save(
+                    out_dir / "ic_launcher_foreground.png",
+                    format="PNG",
+                    optimize=True,
+                )
+
+            color_hex = "#{:02X}{:02X}{:02X}".format(
+                background[0], background[1], background[2]
+            )
+            colors_path = res_dir / "values" / "colors.xml"
+            colors_text = colors_path.read_text(encoding="utf-8")
+            colors_text, count = re.subn(
+                r'(<color name="ic_launcher_background">)[^<]*(</color>)',
+                lambda match: match.group(1) + color_hex + match.group(2),
+                colors_text,
+                count=1,
+            )
+            if count != 1:
+                raise RuntimeError("Could not set adaptive icon background color")
+            colors_path.write_text(colors_text, encoding="utf-8")
+
+            adaptive_dir = res_dir / "mipmap-anydpi-v26"
+            adaptive_dir.mkdir(parents=True, exist_ok=True)
+            (adaptive_dir / "ic_launcher.xml").write_text(
+                """<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/ic_launcher_background"/>
+    <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
+</adaptive-icon>
+""",
+                encoding="utf-8",
+            )
     except Exception as exc:
         raise RuntimeError(
-            "The embedded NOM launcher icon could not be decoded as an image."
+            "The embedded NOM launcher icon could not be generated."
         ) from exc
-
-    # Android 8+ prefers the upstream adaptive icon XML over the bitmap
-    # resources. Remove it so Galaxy launchers must use our NOM bitmap icon
-    # instead of J2ME Loader's foreground/background artwork.
-    adaptive_icon = res_dir / "mipmap-anydpi-v26" / "ic_launcher.xml"
-    if adaptive_icon.exists():
-        adaptive_icon.unlink()
-
-    # Remove upstream adaptive foreground bitmaps as well. They are no longer
-    # referenced, and deleting them prevents accidental reuse by future merges.
-    for folder in density_sizes:
-        foreground = res_dir / folder / "ic_launcher_foreground.png"
-        if foreground.exists():
-            foreground.unlink()
 
     manifest = engine / "app" / "src" / "main" / "AndroidManifest.xml"
     text = manifest.read_text(encoding="utf-8")
