@@ -142,6 +142,15 @@ public final class Nom1LauncherActivity extends Activity {
         // Preserve the original J2ME aspect ratio and upscale as large as
         // possible without stretching. Any remaining area stays as a solid
         // background instead of distorting the game image.
+        // Auto-rotate with the device. J2ME Loader maps orientation=1 to
+        // SCREEN_ORIENTATION_FULL_SENSOR, so portrait remains unchanged while
+        // landscape gets its own full-size layout.
+        profile.orientation = 1;
+
+        // Fit the complete 176x208 game image to the largest possible rectangle
+        // in either orientation without cropping or stretching.
+        profile.screenScaleToFit = true;
+        profile.screenKeepAspectRatio = true;
         profile.screenScaleType = 1;
         profile.screenScaleRatio = 100;
         profile.screenGravity = 2;
