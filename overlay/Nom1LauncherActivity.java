@@ -123,15 +123,18 @@ public final class Nom1LauncherActivity extends Activity {
             throw new IOException("Cannot create NOM profile directory: " + configDir);
         }
 
-        File configFile = new File(configDir, Config.MIDLET_CONFIG_FILE);
-        if (configFile.exists()) {
-            return;
+        ProfileModel profile = ProfilesManager.loadConfig(configDir);
+        if (profile == null) {
+            profile = new ProfileModel(configDir);
         }
 
-        ProfileModel profile = new ProfileModel(configDir);
         profile.screenWidth = 176;
         profile.screenHeight = 208;
-        profile.screenScaleType = 1;
+
+        // Fill the entire Galaxy display. This intentionally stretches the
+        // original J2ME canvas to the device aspect ratio so there are no
+        // letterbox bars on tall Galaxy screens.
+        profile.screenScaleType = 2;
         profile.screenScaleRatio = 100;
         profile.screenGravity = 2;
         profile.forceFullscreen = true;
